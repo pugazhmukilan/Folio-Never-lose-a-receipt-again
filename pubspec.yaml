@@ -1,0 +1,53 @@
+name: warranty_vault
+description: "An offline-first mobile app for managing product warranties, bills, and receipts."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
+  
+  # Local Database
+  sqflite: ^2.3.3+1
+  
+  # File & Image Handling
+  path_provider: ^2.1.4
+  image_picker: ^1.1.2
+  path: ^1.9.0
+  
+  # OCR
+  google_mlkit_text_recognition: ^0.13.1
+  
+  # UI Components
+  flutter_staggered_grid_view: ^0.7.0
+  
+  # Local Storage
+  shared_preferences: ^2.3.2
+  
+  # Notifications
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+  
+  # Backup & Restore
+  archive: ^3.6.1
+  share_plus: ^10.1.2
+  file_picker: ^8.1.4
+  
+  # Utilities
+  intl: ^0.19.0
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

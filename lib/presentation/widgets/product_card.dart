@@ -20,15 +20,19 @@ class ProductCard extends StatelessWidget {
     final product = productWithDetails.product;
     final expiryDate = utils.DateTimeUtils.parseISO(product.expiryDate);
     final coverImagePath = productWithDetails.coverImagePath;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     
     // Calculate expiry status
     Color expiryColor = AppTheme.activeColor;
     String expiryText = '';
+    IconData expiryIcon = Icons.check_circle_rounded;
     
     if (expiryDate != null) {
       if (utils.DateTimeUtils.isExpired(expiryDate)) {
         expiryColor = AppTheme.expiringColor;
         expiryText = 'Expired';
+        expiryIcon = Icons.cancel_rounded;
       } else if (utils.DateTimeUtils.isExpiringSoon(
         expiryDate,
         AppConstants.notificationReminderDays,
@@ -36,98 +40,216 @@ class ProductCard extends StatelessWidget {
         expiryColor = AppTheme.warningColor;
         final days = utils.DateTimeUtils.getDaysUntilExpiry(expiryDate);
         expiryText = '$days days left';
+        expiryIcon = Icons.warning_rounded;
       } else {
         final days = utils.DateTimeUtils.getDaysUntilExpiry(expiryDate);
         expiryText = '$days days';
       }
     }
     
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Cover Image
-            if (coverImagePath != null)
-              AspectRatio(
-                aspectRatio: 1.0,
-                child: Image.file(
-                  File(coverImagePath),
-                  fit: BoxFit.cover,
-                  cacheWidth: AppConstants.imageCacheWidthThumbnail,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.image_not_supported, size: 50),
-                    );
-                  },
-                ),
-              )
-            else
-              AspectRatio(
-                aspectRatio: 1.0,
-                child: Container(
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.receipt_long, size: 50),
-                ),
-              ),
-            
-            // Product Info
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Card(
+        elevation: 0,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cover Image
+              Stack(
                 children: [
-                  // Product Name
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  if (coverImagePath != null)
+                    AspectRatio(
+                      aspectRatio: 1.0,
+                      child: Image.file(
+                        File(coverImagePath),
+                        fit: BoxFit.cover,
+                        cacheWidth: AppConstants.imageCacheWidthThumbnail,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Center(
+                              child: Icon(
+                                Icons.image_not_supported_rounded,
+                                size: 48,
+                                color: colorScheme.onSurface.withOpacity(0.3),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    AspectRatio(
+                      aspectRatio: 1.0,
+                      child: Container(
+                        color: colorScheme.surfaceContainerHighest,
+                        child: Center(
+                          child: Icon(
+                            Icons.receipt_long_rounded,
+                            size: 48,
+                            color: colorScheme.onSurface.withOpacity(0.3),
+                          ),
+                        ),
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
                   
-                  // Category
-                  Text(
-                    product.category,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Expiry Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: expiryColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: expiryColor),
-                    ),
-                    child: Text(
-                      expiryText,
-                      style: TextStyle(
-                        color: expiryColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                  // Expiry Badge (Top Right)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: expiryColor.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            expiryIcon,
+                            size: 12,
+                            color: expiryColor,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            expiryText,
+                            style: TextStyle(
+                              color: expiryColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              
+              // Product Info
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product Name
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: colorScheme.onSurface,
+                        letterSpacing: -0.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    
+                    // Category with Icon
+                    Row(
+                      children: [
+                        Icon(
+                          _getCategoryIcon(product.category),
+                          size: 13,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            product.category,
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: -0.2,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // Purchase Date
+                    if (product.purchaseDate.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 11,
+                            color: colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            utils.DateTimeUtils.formatDisplayDate(
+                              utils.DateTimeUtils.parseISO(product.purchaseDate) ?? DateTime.now(),
+                            ),
+                            style: TextStyle(
+                              color: colorScheme.onSurface.withOpacity(0.5),
+                              fontSize: 11,
+                              letterSpacing: -0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+  
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Electronics':
+        return Icons.devices_rounded;
+      case 'Appliances':
+        return Icons.kitchen_rounded;
+      case 'Furniture':
+        return Icons.chair_rounded;
+      case 'Clothing':
+        return Icons.checkroom_rounded;
+      case 'Automotive':
+        return Icons.directions_car_rounded;
+      case 'Home & Garden':
+        return Icons.home_rounded;
+      case 'Sports & Fitness':
+        return Icons.fitness_center_rounded;
+      case 'Tools':
+        return Icons.build_rounded;
+      case 'Jewelry':
+        return Icons.diamond_rounded;
+      default:
+        return Icons.category_rounded;
+    }
   }
 }

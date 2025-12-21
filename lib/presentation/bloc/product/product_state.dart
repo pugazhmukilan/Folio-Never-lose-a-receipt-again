@@ -27,11 +27,12 @@ class ProductsLoaded extends ProductState {
 /// Single product details loaded
 class ProductDetailsLoaded extends ProductState {
   final ProductWithDetails productWithDetails;
+  final List<ProductWithDetails>? allProducts;
   
-  const ProductDetailsLoaded(this.productWithDetails);
+  const ProductDetailsLoaded(this.productWithDetails, {this.allProducts});
   
   @override
-  List<Object?> get props => [productWithDetails];
+  List<Object?> get props => [productWithDetails, allProducts];
 }
 
 /// Product operation successful

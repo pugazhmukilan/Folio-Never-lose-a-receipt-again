@@ -15,6 +15,7 @@ import 'presentation/bloc/notification/notification_bloc.dart';
 import 'presentation/bloc/notification/notification_event.dart';
 import 'presentation/bloc/backup/backup_bloc.dart';
 import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/welcome_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,7 +83,9 @@ class WarrantyVaultApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.system,
-          home: const HomeScreen(),
+          home: PreferencesHelper.isOnboardingComplete() 
+              ? const HomeScreen() 
+              : const WelcomeScreen(),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/product_repository.dart';
 import '../../../data/repositories/image_storage_service.dart';
 import '../../../data/models/attachment.dart';
+import '../../../data/models/product_with_details.dart';
 import '../../../core/utils/date_utils.dart';
 import 'product_event.dart';
 import 'product_state.dart';
@@ -47,11 +48,19 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
+      // Preserve current products list if available
+      List<ProductWithDetails>? currentProducts;
+      if (state is ProductsLoaded) {
+        currentProducts = (state as ProductsLoaded).products;
+      } else if (state is ProductDetailsLoaded) {
+        currentProducts = (state as ProductDetailsLoaded).allProducts;
+      }
+      
       emit(ProductLoading());
       final productWithDetails = await productRepository.getProductWithDetails(event.productId);
       
       if (productWithDetails != null) {
-        emit(ProductDetailsLoaded(productWithDetails));
+        emit(ProductDetailsLoaded(productWithDetails, allProducts: currentProducts));
       } else {
         emit(const ProductError('Product not found'));
       }

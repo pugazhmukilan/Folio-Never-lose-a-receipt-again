@@ -62,20 +62,38 @@ class _ImageCarouselState extends State<ImageCarousel> {
                 onTap: () {
                   _showFullScreenImage(context, index);
                 },
-                child: Image.file(
-                  File(widget.imagePaths[index]),
-                  fit: BoxFit.contain,
-                  cacheWidth: AppConstants.imageCacheWidthDetail,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.broken_image,
-                        size: 80,
-                        color: Colors.grey,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
                       ),
-                    );
-                  },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          File(widget.imagePaths[index]),
+                          fit: BoxFit.contain,
+                          cacheWidth: AppConstants.imageCacheWidthDetail,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Icon(
+                                Icons.broken_image,
+                                size: 80,
+                                color: Colors.grey,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               );
             },
@@ -95,8 +113,8 @@ class _ImageCarouselState extends State<ImageCarousel> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _currentIndex == index
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey[400],
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.4),
                 ),
               ),
             ),

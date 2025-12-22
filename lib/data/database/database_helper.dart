@@ -4,6 +4,7 @@ import '../../core/constants/app_constants.dart';
 import '../models/product.dart';
 import '../models/attachment.dart';
 import '../models/note.dart';
+import '../models/ocr_data.dart';
 
 class DatabaseHelper {
   static DatabaseHelper? _instance;
@@ -29,12 +30,37 @@ class DatabaseHelper {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, AppConstants.databaseName);
     
-    return await openDatabase(
+    final db = await openDatabase(
       path,
       version: AppConstants.databaseVersion,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+
+    // Hot-reload safe: ensure expected columns exist even if the database was
+    // opened before a version bump/migration was applied.
+    await _ensureWarrantyMonthsColumn(db);
+
+    return db;
+  }
+
+  Future<void> _ensureWarrantyMonthsColumn(Database db) async {
+    try {
+      final columns = await db.rawQuery(
+        'PRAGMA table_info(${AppConstants.tableProducts})',
+      );
+
+      final hasWarrantyMonths = columns.any((c) => c['name'] == 'warranty_months');
+      if (!hasWarrantyMonths) {
+        await db.execute('''
+          ALTER TABLE ${AppConstants.tableProducts}
+          ADD COLUMN warranty_months INTEGER
+        ''');
+      }
+    } catch (_) {
+      // If anything goes wrong (e.g., table doesn't exist yet during initial create),
+      // ignore here; create/migration paths will handle it.
+    }
   }
   
   /// Create database tables
@@ -46,6 +72,7 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         purchase_date TEXT NOT NULL,
         expiry_date TEXT NOT NULL,
+        warranty_months INTEGER,
         category TEXT NOT NULL,
         notification_id INTEGER
       )
@@ -73,6 +100,19 @@ class DatabaseHelper {
       )
     ''');
     
+    // Create OCR data table for storing extracted information from bills
+    await db.execute('''
+      CREATE TABLE ${AppConstants.tableOcrData} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        extracted_text TEXT,
+        extracted_dates TEXT,
+        extracted_amounts TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES ${AppConstants.tableProducts} (id) ON DELETE CASCADE
+      )
+    ''');
+    
     // Create indexes for better performance
     await db.execute('''
       CREATE INDEX idx_attachments_product_id 
@@ -83,11 +123,42 @@ class DatabaseHelper {
       CREATE INDEX idx_notes_product_id 
       ON ${AppConstants.tableNotes} (product_id)
     ''');
+    
+    await db.execute('''
+      CREATE INDEX idx_ocr_data_product_id 
+      ON ${AppConstants.tableOcrData} (product_id)
+    ''');
   }
   
   /// Handle database upgrades
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle future database schema upgrades here
+    // Upgrade from version 1 to 2: Add OCR data table
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE ${AppConstants.tableOcrData} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          extracted_text TEXT,
+          extracted_dates TEXT,
+          extracted_amounts TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES ${AppConstants.tableProducts} (id) ON DELETE CASCADE
+        )
+      ''');
+      
+      await db.execute('''
+        CREATE INDEX idx_ocr_data_product_id 
+        ON ${AppConstants.tableOcrData} (product_id)
+      ''');
+    }
+
+    // Upgrade from version 2 to 3: Add warranty months to products table
+    if (oldVersion < 3) {
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableProducts}
+        ADD COLUMN warranty_months INTEGER
+      ''');
+    }
   }
   
   // ==================== PRODUCT OPERATIONS ====================
@@ -95,6 +166,7 @@ class DatabaseHelper {
   /// Insert a new product
   Future<int> insertProduct(Product product) async {
     final db = await database;
+    await _ensureWarrantyMonthsColumn(db);
     return await db.insert(
       AppConstants.tableProducts,
       product.toMap(),
@@ -161,6 +233,7 @@ class DatabaseHelper {
   /// Update product
   Future<int> updateProduct(Product product) async {
     final db = await database;
+    await _ensureWarrantyMonthsColumn(db);
     return await db.update(
       AppConstants.tableProducts,
       product.toMap(),
@@ -377,5 +450,55 @@ class DatabaseHelper {
     await db.delete(AppConstants.tableNotes);
     await db.delete(AppConstants.tableAttachments);
     await db.delete(AppConstants.tableProducts);
+    await db.delete(AppConstants.tableOcrData);
+  }
+  
+  // ==================== OCR DATA OPERATIONS ====================
+  
+  /// Insert OCR data for a product
+  Future<int> insertOcrData(OcrData ocrData) async {
+    final db = await database;
+    return await db.insert(
+      AppConstants.tableOcrData,
+      ocrData.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+  
+  /// Get OCR data for a product
+  Future<OcrData?> getOcrDataForProduct(int productId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      AppConstants.tableOcrData,
+      where: 'product_id = ?',
+      whereArgs: [productId],
+      orderBy: 'created_at DESC',
+      limit: 1,
+    );
+    
+    if (maps.isEmpty) return null;
+    return OcrData.fromMap(maps.first);
+  }
+  
+  /// Get all OCR data (for backup)
+  Future<List<OcrData>> getAllOcrData() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      AppConstants.tableOcrData,
+    );
+    
+    return List.generate(maps.length, (i) {
+      return OcrData.fromMap(maps[i]);
+    });
+  }
+  
+  /// Delete OCR data for a product
+  Future<int> deleteOcrDataForProduct(int productId) async {
+    final db = await database;
+    return await db.delete(
+      AppConstants.tableOcrData,
+      where: 'product_id = ?',
+      whereArgs: [productId],
+    );
   }
 }

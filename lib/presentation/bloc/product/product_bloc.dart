@@ -3,6 +3,8 @@ import '../../../data/repositories/product_repository.dart';
 import '../../../data/repositories/image_storage_service.dart';
 import '../../../data/models/attachment.dart';
 import '../../../data/models/product_with_details.dart';
+import '../../../data/models/ocr_data.dart';
+import '../../../data/database/database_helper.dart';
 import '../../../core/utils/date_utils.dart';
 import 'product_event.dart';
 import 'product_state.dart';
@@ -95,6 +97,22 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         );
         
         await productRepository.addAttachment(attachment);
+      }
+      
+      // Save OCR data if available
+      if (event.ocrExtractedText != null || 
+          (event.ocrExtractedDates != null && event.ocrExtractedDates!.isNotEmpty) ||
+          (event.ocrExtractedAmounts != null && event.ocrExtractedAmounts!.isNotEmpty)) {
+        final ocrData = OcrData(
+          productId: productId,
+          extractedText: event.ocrExtractedText,
+          extractedDates: event.ocrExtractedDates ?? [],
+          extractedAmounts: event.ocrExtractedAmounts ?? [],
+          createdAt: DateTime.now().toIso8601String(),
+        );
+        
+        final dbHelper = DatabaseHelper();
+        await dbHelper.insertOcrData(ocrData);
       }
       
       // Reload all products

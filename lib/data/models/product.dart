@@ -5,6 +5,7 @@ class Product extends Equatable {
   final String name;
   final String purchaseDate;
   final String expiryDate;
+  final int? warrantyMonths;
   final String category;
   final int? notificationId;
   
@@ -13,6 +14,7 @@ class Product extends Equatable {
     required this.name,
     required this.purchaseDate,
     required this.expiryDate,
+    this.warrantyMonths,
     required this.category,
     this.notificationId,
   });
@@ -24,6 +26,7 @@ class Product extends Equatable {
       'name': name,
       'purchase_date': purchaseDate,
       'expiry_date': expiryDate,
+      'warranty_months': warrantyMonths,
       'category': category,
       'notification_id': notificationId,
     };
@@ -36,6 +39,7 @@ class Product extends Equatable {
       name: map['name'] as String,
       purchaseDate: map['purchase_date'] as String,
       expiryDate: map['expiry_date'] as String,
+      warrantyMonths: map['warranty_months'] as int?,
       category: map['category'] as String,
       notificationId: map['notification_id'] as int?,
     );
@@ -47,6 +51,7 @@ class Product extends Equatable {
     String? name,
     String? purchaseDate,
     String? expiryDate,
+    int? warrantyMonths,
     String? category,
     int? notificationId,
   }) {
@@ -55,6 +60,7 @@ class Product extends Equatable {
       name: name ?? this.name,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       expiryDate: expiryDate ?? this.expiryDate,
+      warrantyMonths: warrantyMonths ?? this.warrantyMonths,
       category: category ?? this.category,
       notificationId: notificationId ?? this.notificationId,
     );
@@ -67,6 +73,7 @@ class Product extends Equatable {
       'name': name,
       'purchase_date': purchaseDate,
       'expiry_date': expiryDate,
+      'warranty_months': warrantyMonths,
       'category': category,
       'notification_id': notificationId,
     };
@@ -79,16 +86,17 @@ class Product extends Equatable {
       name: json['name'] as String,
       purchaseDate: json['purchase_date'] as String,
       expiryDate: json['expiry_date'] as String,
+      warrantyMonths: json['warranty_months'] as int?,
       category: json['category'] as String,
       notificationId: json['notification_id'] as int?,
     );
   }
   
   @override
-  List<Object?> get props => [id, name, purchaseDate, expiryDate, category, notificationId];
+  List<Object?> get props => [id, name, purchaseDate, expiryDate, warrantyMonths, category, notificationId];
   
   @override
   String toString() {
-    return 'Product{id: $id, name: $name, category: $category, purchaseDate: $purchaseDate, expiryDate: $expiryDate}';
+    return 'Product{id: $id, name: $name, category: $category, purchaseDate: $purchaseDate, expiryDate: $expiryDate, warrantyMonths: $warrantyMonths}';
   }
 }

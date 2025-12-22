@@ -37,6 +37,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         title: const Text('Product Details'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Edit warranty',
+            onPressed: () {
+              final state = context.read<ProductBloc>().state;
+              if (state is ProductDetailsLoaded) {
+                _showEditWarrantyDialog(state.productWithDetails.product);
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () => _confirmDelete(context),
           ),
@@ -61,6 +71,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         builder: (context, state) {
           if (state is ProductLoading) {
             return const LoadingIndicator(message: 'Loading product...');
+          }
+
+          // After an update, ProductBloc temporarily emits ProductsLoaded and/or
+          // ProductOperationSuccess. This screen only knows how to render
+          // ProductDetailsLoaded, so treat these as a refresh state.
+          if (state is ProductsLoaded || state is ProductOperationSuccess) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                context.read<ProductBloc>().add(LoadProductDetails(widget.productId));
+              }
+            });
+            return const LoadingIndicator(message: 'Refreshing product...');
           }
           
           if (state is ProductError) {
@@ -92,6 +114,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     
     final purchaseDate = utils.DateTimeUtils.parseISO(product.purchaseDate);
     final expiryDate = utils.DateTimeUtils.parseISO(product.expiryDate);
+    final warrantyMonths = product.warrantyMonths;
     
     final imagePaths = attachments.map((a) => a.imagePath).toList();
     
@@ -137,7 +160,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 // Purchase & Expiry Details Card
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
                         _buildDetailRow(
@@ -147,7 +170,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               ? utils.DateTimeUtils.formatDisplayDate(purchaseDate)
                               : 'N/A',
                         ),
-                        const Divider(),
+                        if (warrantyMonths != null) ...[
+                          const SizedBox(height: 16),
+                          Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+                          const SizedBox(height: 16),
+                          _buildDetailRow(
+                            icon: Icons.timer,
+                            label: 'Warranty Duration',
+                            value: '$warrantyMonths months',
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+                        const SizedBox(height: 16),
                         _buildDetailRow(
                           icon: Icons.event_available,
                           label: 'Warranty Expires',
@@ -155,7 +190,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               ? utils.DateTimeUtils.formatDisplayDate(expiryDate)
                               : 'N/A',
                         ),
-                        const Divider(),
+                        const SizedBox(height: 16),
+                        Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+                        const SizedBox(height: 16),
                         _buildDetailRow(
                           icon: Icons.timer,
                           label: 'Status',
@@ -311,6 +348,88 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
     );
   }
+
+  int? _deriveWarrantyMonths({required DateTime purchaseDate, required DateTime expiryDate}) {
+    // Best-effort derivation for legacy products that only stored expiryDate.
+    // Assumes expiry is roughly purchaseDate + N months.
+    final diffMonths = (expiryDate.year - purchaseDate.year) * 12 + (expiryDate.month - purchaseDate.month);
+    if (diffMonths <= 0) return null;
+    return diffMonths;
+  }
+
+  Future<void> _showEditWarrantyDialog(dynamic product) async {
+    final purchaseDate = utils.DateTimeUtils.parseISO(product.purchaseDate);
+    final expiryDate = utils.DateTimeUtils.parseISO(product.expiryDate);
+
+    if (purchaseDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot edit warranty: invalid purchase date')),
+      );
+      return;
+    }
+
+    final derivedMonths = expiryDate != null
+        ? _deriveWarrantyMonths(purchaseDate: purchaseDate, expiryDate: expiryDate)
+        : null;
+
+    int selectedMonths = product.warrantyMonths ?? derivedMonths ?? 12;
+    selectedMonths = selectedMonths.clamp(3, 60);
+
+    DateTime previewExpiry = utils.DateTimeUtils.calculateExpiryDate(purchaseDate, selectedMonths);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit warranty period'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Duration: $selectedMonths months'),
+                  Slider(
+                    value: selectedMonths.toDouble(),
+                    min: 3,
+                    max: 60,
+                    divisions: 19,
+                    label: '$selectedMonths months',
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedMonths = value.toInt();
+                        previewExpiry = utils.DateTimeUtils.calculateExpiryDate(purchaseDate, selectedMonths);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text('New expiry: ${utils.DateTimeUtils.formatDisplayDate(previewExpiry)}'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final updated = product.copyWith(
+                      warrantyMonths: selectedMonths,
+                      expiryDate: utils.DateTimeUtils.formatISO(previewExpiry),
+                    );
+
+                    context.read<ProductBloc>().add(UpdateProduct(updated));
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
   
   Widget _buildDetailRow({
     required IconData icon,
@@ -318,34 +437,45 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     required String value,
     Color? valueColor,
   }) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: valueColor,
-                ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: Colors.grey[700]),
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: valueColor ?? Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
   

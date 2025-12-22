@@ -1,5 +1,22 @@
 import 'package:intl/intl.dart';
 
+class AppDateUtils {
+  /// Format DateTime to string for database storage
+  static String formatDate(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+  
+  /// Parse date string from database
+  static DateTime? parseDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return null;
+    try {
+      return DateFormat('yyyy-MM-dd').parse(dateString);
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
 class DateTimeUtils {
   /// Format DateTime to display format (e.g., "Jan 15, 2024")
   static String formatDisplayDate(DateTime date) {

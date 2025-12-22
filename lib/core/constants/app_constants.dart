@@ -5,13 +5,12 @@ class AppConstants {
   
   // Database
   static const String databaseName = 'warranty_vault.db';
-  static const int databaseVersion = 3;  // v2: OCR data table, v3: warranty_months on products
+  static const int databaseVersion = 3;  // v2: reserved, v3: warranty_months
   
   // Tables
   static const String tableProducts = 'products';
   static const String tableAttachments = 'attachments';
   static const String tableNotes = 'notes';
-  static const String tableOcrData = 'ocr_data';  // New table for OCR extracted data
   
   // Product Categories
   static const List<String> productCategories = [

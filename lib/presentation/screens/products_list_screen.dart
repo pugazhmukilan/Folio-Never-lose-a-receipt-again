@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -61,7 +60,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
       body: BlocConsumer<ProductBloc, ProductState>(
         listener: (context, state) {
           if (state is ProductError) {
@@ -79,7 +77,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           }
         },
         builder: (context, state) {
-          if (state is ProductLoading) {
+          if (state is ProductLoading || state is ProductOperationSuccess) {
             return const LoadingIndicator(message: 'Loading products...');
           }
 
@@ -193,10 +191,10 @@ class _ProductsListScreenState extends State<ProductsListScreen>
             children: [
               Text(
                 AppConstants.appName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                   letterSpacing: -1,
                 ),
               ),
@@ -206,29 +204,20 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: Colors.white.withOpacity(0.6),
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF252525),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+          SizedBox(
+            width: 44,
+            height: 44,
             child: IconButton(
-              icon: const Icon(Icons.settings_outlined,
-                  color: Colors.white, size: 22),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
+              icon: Icon(
+                Icons.settings_outlined,
+                color: colorScheme.onSurface,
+                size: 22,
+              ),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -245,6 +234,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
 
   Widget _buildHeroSection(
       List<ProductWithDetails> products, ColorScheme colorScheme) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     int activeCount = 0;
     int expiringCount = 0;
     int expiredCount = 0;
@@ -267,20 +257,17 @@ class _ProductsListScreenState extends State<ProductsListScreen>
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF252525),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: Colors.white.withOpacity(0.03),
-            blurRadius: 0,
-            offset: const Offset(0, -1),
-          ),
-        ],
+        boxShadow: isLight
+            ? const []
+            : [
+                BoxShadow(
+                  color: colorScheme.shadow.withOpacity(0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
       ),
       child: Row(
             children: [
@@ -289,27 +276,34 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                   '${activeCount}',
                   'Active',
                   const Color(0xFF4ECDC4),
-                  Icons.check_circle_rounded,
+                  Icons.check_circle_outline,
+                  colorScheme,
                 ),
               ),
               Container(
-                  width: 1, height: 40, color: const Color(0xFF3A3A3A)),
+                  width: 1,
+                  height: 40,
+                  color: colorScheme.outline.withOpacity(0.6)),
               Expanded(
                 child: _buildStatItem(
                   '${expiringCount}',
                   'Expiring',
                   const Color(0xFFFF9800),
-                  Icons.warning_rounded,
+                  Icons.warning_amber_outlined,
+                  colorScheme,
                 ),
               ),
               Container(
-                  width: 1, height: 40, color: const Color(0xFF3A3A3A)),
+                  width: 1,
+                  height: 40,
+                  color: colorScheme.outline.withOpacity(0.6)),
               Expanded(
                 child: _buildStatItem(
                   '${expiredCount}',
                   'Expired',
                   const Color(0xFFF44336),
-                  Icons.cancel_rounded,
+                  Icons.cancel_outlined,
+                  colorScheme,
                 ),
               ),
             ],
@@ -319,17 +313,17 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   }
 
   Widget _buildStatItem(
-      String value, String label, Color color, IconData icon) {
+      String value, String label, Color color, IconData icon, ColorScheme colorScheme) {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
@@ -338,7 +332,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Colors.white.withOpacity(0.5),
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
       ],
@@ -346,19 +340,22 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   }
 
   Widget _buildSearchBar(ColorScheme colorScheme) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF252525),
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: isLight
+              ? const []
+              : [
+                  BoxShadow(
+                    color: colorScheme.shadow.withOpacity(0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
         child: TextField(
           controller: _searchController,
@@ -380,27 +377,30 @@ class _ProductsListScreenState extends State<ProductsListScreen>
             });
           },
           onSubmitted: _performSearch,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: colorScheme.onSurface,
             fontSize: 15,
             fontWeight: FontWeight.w400,
           ),
           decoration: InputDecoration(
             hintText: 'Search products...',
             hintStyle: TextStyle(
-              color: Colors.white.withOpacity(0.3),
+              color: colorScheme.onSurfaceVariant.withOpacity(0.7),
               fontSize: 15,
               fontWeight: FontWeight.w400,
             ),
             prefixIcon: Icon(
-              Icons.search_rounded,
-              color: Colors.white.withOpacity(0.4),
+              Icons.search_outlined,
+              color: colorScheme.onSurfaceVariant,
               size: 22,
             ),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear_rounded,
-                        color: Colors.white, size: 20),
+                    icon: Icon(
+                      Icons.clear,
+                      color: colorScheme.onSurfaceVariant,
+                      size: 20,
+                    ),
                     onPressed: () {
                       _searchController.clear();
                       setState(() {
@@ -457,19 +457,20 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                   }
                 }
               },
-              backgroundColor: const Color(0xFF252525),
+              backgroundColor: colorScheme.surfaceContainerHighest,
               selectedColor: colorScheme.primary,
               labelStyle: TextStyle(
                 color: isSelected
-                    ? Colors.black
-                    : Colors.white.withOpacity(0.7),
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurface,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(
-                  color:
-                      isSelected ? colorScheme.primary : const Color(0xFF3A3A3A),
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.outline.withOpacity(0.7),
                   width: 1.5,
                 ),
               ),
@@ -486,18 +487,18 @@ class _ProductsListScreenState extends State<ProductsListScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.inbox_rounded,
+          Icon(
+            Icons.inbox_outlined,
             size: 80,
-            color: Color(0xFF4A4A4A),
+            color: colorScheme.onSurfaceVariant.withOpacity(0.7),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'No Products Yet',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -506,7 +507,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
-              color: Colors.white.withOpacity(0.6),
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 32),
@@ -518,11 +519,13 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                 ),
               );
             },
-            icon: const Icon(Icons.add_rounded, color: Colors.black),
-            label: const Text(
+            icon: Icon(Icons.add, color: colorScheme.onPrimary),
+            label: Text(
               'Add Product',
-              style:
-                  TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: colorScheme.onPrimary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: colorScheme.primary,
@@ -550,10 +553,10 @@ class _ProductsListScreenState extends State<ProductsListScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.search_off_rounded,
+          Icon(
+            Icons.search_off,
             size: 60,
-            color: Color(0xFF4A4A4A),
+            color: colorScheme.onSurfaceVariant.withOpacity(0.7),
           ),
           const SizedBox(height: 16),
           Text(
@@ -561,7 +564,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.7),
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],

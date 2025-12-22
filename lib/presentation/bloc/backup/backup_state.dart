@@ -15,12 +15,12 @@ class BackupExporting extends BackupState {}
 
 /// Export completed
 class BackupExportSuccess extends BackupState {
-  final String zipFilePath;
+  final String backupFilePath;
   
-  const BackupExportSuccess(this.zipFilePath);
+  const BackupExportSuccess(this.backupFilePath);
   
   @override
-  List<Object?> get props => [zipFilePath];
+  List<Object?> get props => [backupFilePath];
 }
 
 /// Importing data

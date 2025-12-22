@@ -8,6 +8,7 @@ import '../bloc/backup/backup_state.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/preferences_helper.dart';
 import '../widgets/common_widgets.dart';
+import '../bloc/theme/theme_cubit.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -52,7 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (state is BackupExportSuccess) {
             // Share the backup file
             Share.shareXFiles(
-              [XFile(state.zipFilePath)],
+              [XFile(state.backupFilePath, mimeType: 'application/octet-stream')],
               subject: 'WarrantyVault Backup',
             );
             
@@ -73,10 +74,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           }
           
           if (state is BackupError) {
+            final colorScheme = Theme.of(context).colorScheme;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red,
+                backgroundColor: colorScheme.error,
               ),
             );
           }
@@ -102,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.cloud_upload),
+                        leading: const Icon(Icons.cloud_upload_outlined),
                         title: const Text('Export Backup'),
                         subtitle: Text('Last backup: $_lastBackupDate'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -110,7 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.cloud_download),
+                        leading: const Icon(Icons.cloud_download_outlined),
                         title: const Text('Import Backup'),
                         subtitle: const Text('Restore from backup file'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -126,8 +128,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
+                      ListTile(
+                        leading: const Icon(Icons.contrast_outlined),
+                        title: const Text('Theme'),
+                        subtitle: Text(_themeModeLabel(context)),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: _changeThemeMode,
+                      ),
+                      const Divider(height: 1),
                       SwitchListTile(
-                        secondary: const Icon(Icons.notifications),
+                        secondary: const Icon(Icons.notifications_outlined),
                         title: const Text('Notifications'),
                         subtitle: const Text('Warranty expiry reminders'),
                         value: _notificationsEnabled,
@@ -140,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.timer),
+                        leading: const Icon(Icons.timer_outlined),
                         title: const Text('Default Warranty Duration'),
                         subtitle: Text('$_defaultWarrantyDuration months'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -157,13 +167,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.info),
+                        leading: const Icon(Icons.info_outline),
                         title: const Text('App Version'),
                         subtitle: Text(AppConstants.appVersion),
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.description),
+                        leading: const Icon(Icons.description_outlined),
                         title: const Text('About WarrantyVault'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: _showAboutDialog,
@@ -182,16 +192,93 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
   
   Widget _buildSectionHeader(String title) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: Colors.grey,
+          color: colorScheme.onSurfaceVariant,
         ),
       ),
+    );
+  }
+
+  String _themeModeLabel(BuildContext context) {
+    final mode = context.watch<ThemeCubit>().state;
+    switch (mode) {
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+      case ThemeMode.system:
+        return 'System';
+    }
+  }
+
+  void _changeThemeMode() {
+    final cubit = context.read<ThemeCubit>();
+    ThemeMode selected = cubit.state;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Theme'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.system,
+                    groupValue: selected,
+                    title: const Text('System'),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => selected = value);
+                    },
+                  ),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.light,
+                    groupValue: selected,
+                    title: const Text('Light'),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => selected = value);
+                    },
+                  ),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.dark,
+                    groupValue: selected,
+                    title: const Text('Dark'),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => selected = value);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await cubit.setThemeMode(selected);
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
   
@@ -226,11 +313,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['zip'],
+        allowedExtensions: ['zip', 'wvvault', 'json'],
       );
       
-      if (result != null && result.files.single.path != null) {
-        final zipFilePath = result.files.single.path!;
+      if (result == null) return;
+
+      final selectedPath = result.files.single.path;
+      if (selectedPath == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to import: file path unavailable')),
+        );
+        return;
+      }
         
         if (!mounted) return;
         
@@ -250,10 +345,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    context.read<BackupBloc>().add(ImportBackup(zipFilePath));
+                    context.read<BackupBloc>().add(ImportBackup(selectedPath));
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: Theme.of(context).colorScheme.error,
                   ),
                   child: const Text('Import'),
                 ),
@@ -261,7 +356,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             );
           },
         );
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to pick file: ${e.toString()}')),

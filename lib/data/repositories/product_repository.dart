@@ -112,15 +112,9 @@ class ProductRepository {
     return await _databaseHelper.getAttachmentsByType(productId, imageType);
   }
   
-  /// Update attachment
-  Future<bool> updateAttachment(Attachment attachment) async {
-    final result = await _databaseHelper.updateAttachment(attachment);
-    return result > 0;
-  }
-  
   /// Delete attachment
-  Future<bool> deleteAttachment(int attachmentId) async {
-    final result = await _databaseHelper.deleteAttachment(attachmentId);
+  Future<bool> deleteAttachment(int id) async {
+    final result = await _databaseHelper.deleteAttachment(id);
     return result > 0;
   }
   
@@ -148,8 +142,8 @@ class ProductRepository {
   }
   
   /// Delete note
-  Future<bool> deleteNote(int noteId) async {
-    final result = await _databaseHelper.deleteNote(noteId);
+  Future<bool> deleteNote(int id) async {
+    final result = await _databaseHelper.deleteNote(id);
     return result > 0;
   }
   
@@ -158,9 +152,7 @@ class ProductRepository {
     return await _databaseHelper.getAllNotes();
   }
   
-  // ==================== UTILITY OPERATIONS ====================
-  
-  /// Clear all data
+  /// Clear all data from database
   Future<void> clearAllData() async {
     await _databaseHelper.clearAllData();
   }

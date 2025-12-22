@@ -40,7 +40,7 @@ class _ImageCarouselState extends State<ImageCarousel> {
         height: 300,
         color: Colors.grey[300],
         child: const Center(
-          child: Icon(Icons.image_not_supported, size: 80, color: Colors.grey),
+          child: Icon(Icons.image_not_supported_outlined, size: 80, color: Colors.grey),
         ),
       );
     }
@@ -84,7 +84,7 @@ class _ImageCarouselState extends State<ImageCarousel> {
                             return Container(
                               color: Colors.grey[300],
                               child: const Icon(
-                                Icons.broken_image,
+                                Icons.broken_image_outlined,
                                 size: 80,
                                 color: Colors.grey,
                               ),

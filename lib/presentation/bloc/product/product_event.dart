@@ -27,17 +27,11 @@ class CreateProduct extends ProductEvent {
   final Product product;
   final List<String> imagePaths;
   final List<String> imageTypes;
-  final String? ocrExtractedText;
-  final List<DateTime>? ocrExtractedDates;
-  final List<double>? ocrExtractedAmounts;
   
   const CreateProduct({
     required this.product,
     required this.imagePaths,
     required this.imageTypes,
-    this.ocrExtractedText,
-    this.ocrExtractedDates,
-    this.ocrExtractedAmounts,
   });
   
   @override
@@ -45,9 +39,6 @@ class CreateProduct extends ProductEvent {
         product,
         imagePaths,
         imageTypes,
-        ocrExtractedText,
-        ocrExtractedDates,
-        ocrExtractedAmounts,
       ];
 }
 

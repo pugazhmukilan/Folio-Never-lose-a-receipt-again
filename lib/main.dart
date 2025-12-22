@@ -10,10 +10,10 @@ import 'data/repositories/image_storage_service.dart';
 import 'data/repositories/notification_service.dart';
 import 'data/repositories/backup_service.dart';
 import 'presentation/bloc/product/product_bloc.dart';
-import 'presentation/bloc/ocr/ocr_bloc.dart';
 import 'presentation/bloc/notification/notification_bloc.dart';
 import 'presentation/bloc/notification/notification_event.dart';
 import 'presentation/bloc/backup/backup_bloc.dart';
+import 'presentation/bloc/theme/theme_cubit.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/welcome_screen.dart';
 
@@ -64,9 +64,6 @@ class WarrantyVaultApp extends StatelessWidget {
             ),
           ),
           BlocProvider(
-            create: (context) => OcrBloc(),
-          ),
-          BlocProvider(
             create: (context) => NotificationBloc(
               notificationService: notificationService,
             )..add(InitializeNotifications()),
@@ -76,16 +73,23 @@ class WarrantyVaultApp extends StatelessWidget {
               backupService: backupService,
             ),
           ),
+          BlocProvider(
+            create: (context) => ThemeCubit(),
+          ),
         ],
-        child: MaterialApp(
-          title: AppConstants.appName,
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.system,
-          home: PreferencesHelper.isOnboardingComplete() 
-              ? const HomeScreen() 
-              : const WelcomeScreen(),
+        child: BlocBuilder<ThemeCubit, ThemeMode>(
+          builder: (context, themeMode) {
+            return MaterialApp(
+              title: AppConstants.appName,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeMode,
+              home: PreferencesHelper.isOnboardingComplete()
+                  ? const HomeScreen()
+                  : const WelcomeScreen(),
+            );
+          },
         ),
       ),
     );

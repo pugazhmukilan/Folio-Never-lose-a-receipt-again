@@ -76,3 +76,14 @@ class ProductsFiltered extends ProductState {
   @override
   List<Object?> get props => [products, filter];
 }
+
+/// Expiring products loaded
+class ExpiringProductsLoaded extends ProductState {
+  final List<ProductWithDetails> products;
+  final int days;
+  
+  const ExpiringProductsLoaded(this.products, this.days);
+  
+  @override
+  List<Object?> get props => [products, days];
+}

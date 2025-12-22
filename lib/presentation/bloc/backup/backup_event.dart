@@ -12,10 +12,10 @@ class ExportBackup extends BackupEvent {}
 
 /// Import data from backup file
 class ImportBackup extends BackupEvent {
-  final String zipFilePath;
+  final String backupPath;
   
-  const ImportBackup(this.zipFilePath);
+  const ImportBackup(this.backupPath);
   
   @override
-  List<Object?> get props => [zipFilePath];
+  List<Object?> get props => [backupPath];
 }

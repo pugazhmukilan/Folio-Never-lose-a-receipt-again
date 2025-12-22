@@ -45,12 +45,14 @@ class CustomButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: isLoading ? null : onPressed,
       icon: isLoading
-          ? const SizedBox(
+          ? SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  textColor ?? Theme.of(context).colorScheme.onPrimary,
+                ),
               ),
             )
           : Icon(icon ?? Icons.check),

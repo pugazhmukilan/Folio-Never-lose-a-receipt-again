@@ -3,8 +3,6 @@ import '../../../data/repositories/product_repository.dart';
 import '../../../data/repositories/image_storage_service.dart';
 import '../../../data/models/attachment.dart';
 import '../../../data/models/product_with_details.dart';
-import '../../../data/models/ocr_data.dart';
-import '../../../data/database/database_helper.dart';
 import '../../../core/utils/date_utils.dart';
 import 'product_event.dart';
 import 'product_state.dart';
@@ -12,6 +10,10 @@ import 'product_state.dart';
 class ProductBloc extends Bloc<ProductEvent, ProductState> {
   final ProductRepository productRepository;
   final ImageStorageService imageStorageService;
+
+  // Cache the last list the UI was showing so switching to detail-related states
+  // doesn't make the products list screen appear empty when navigating back.
+  List<ProductWithDetails>? _cachedProducts;
   
   ProductBloc({
     required this.productRepository,
@@ -31,6 +33,21 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     on<FilterProductsByCategory>(_onFilterProductsByCategory);
     on<LoadExpiringProducts>(_onLoadExpiringProducts);
   }
+
+  void _updateCachedProductsFromState(ProductState s) {
+    if (s is ProductsLoaded) {
+      _cachedProducts = s.products;
+    } else if (s is ProductSearchResults) {
+      _cachedProducts = s.results;
+    } else if (s is ProductsFiltered) {
+      _cachedProducts = s.products;
+    } else if (s is ProductDetailsLoaded) {
+      // Preserve the cached list if it exists on the details state.
+      if (s.allProducts != null) {
+        _cachedProducts = s.allProducts;
+      }
+    }
+  }
   
   Future<void> _onLoadProducts(
     LoadProducts event,
@@ -39,6 +56,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     try {
       emit(ProductLoading());
       final products = await productRepository.getAllProductsWithDetails();
+      _cachedProducts = products;
       emit(ProductsLoaded(products));
     } catch (e) {
       emit(ProductError('Failed to load products: ${e.toString()}'));
@@ -50,19 +68,13 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
-      // Preserve current products list if available
-      List<ProductWithDetails>? currentProducts;
-      if (state is ProductsLoaded) {
-        currentProducts = (state as ProductsLoaded).products;
-      } else if (state is ProductDetailsLoaded) {
-        currentProducts = (state as ProductDetailsLoaded).allProducts;
-      }
+      _updateCachedProductsFromState(state);
       
       emit(ProductLoading());
       final productWithDetails = await productRepository.getProductWithDetails(event.productId);
       
       if (productWithDetails != null) {
-        emit(ProductDetailsLoaded(productWithDetails, allProducts: currentProducts));
+        emit(ProductDetailsLoaded(productWithDetails, allProducts: _cachedProducts));
       } else {
         emit(const ProductError('Product not found'));
       }
@@ -95,28 +107,13 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
           imagePath: savedPath,
           imageType: imageType,
         );
-        
+
         await productRepository.addAttachment(attachment);
-      }
-      
-      // Save OCR data if available
-      if (event.ocrExtractedText != null || 
-          (event.ocrExtractedDates != null && event.ocrExtractedDates!.isNotEmpty) ||
-          (event.ocrExtractedAmounts != null && event.ocrExtractedAmounts!.isNotEmpty)) {
-        final ocrData = OcrData(
-          productId: productId,
-          extractedText: event.ocrExtractedText,
-          extractedDates: event.ocrExtractedDates ?? [],
-          extractedAmounts: event.ocrExtractedAmounts ?? [],
-          createdAt: DateTime.now().toIso8601String(),
-        );
-        
-        final dbHelper = DatabaseHelper();
-        await dbHelper.insertOcrData(ocrData);
       }
       
       // Reload all products
       final products = await productRepository.getAllProductsWithDetails();
+      _cachedProducts = products;
       emit(ProductsLoaded(products));
       emit(const ProductOperationSuccess('Product created successfully'));
     } catch (e) {
@@ -135,6 +132,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       
       if (success) {
         final products = await productRepository.getAllProductsWithDetails();
+        _cachedProducts = products;
         emit(ProductsLoaded(products));
         emit(const ProductOperationSuccess('Product updated successfully'));
       } else {
@@ -165,6 +163,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         }
         
         final products = await productRepository.getAllProductsWithDetails();
+        _cachedProducts = products;
         emit(ProductsLoaded(products));
         emit(const ProductOperationSuccess('Product deleted successfully'));
       } else {
@@ -180,6 +179,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
+      _updateCachedProductsFromState(state);
       emit(ProductLoading());
       
       // Save image to app directory
@@ -191,13 +191,13 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         imagePath: savedPath,
         imageType: event.imageType,
       );
-      
+
       await productRepository.addAttachment(attachment);
       
       // Reload product details
       final productWithDetails = await productRepository.getProductWithDetails(event.productId);
       if (productWithDetails != null) {
-        emit(ProductDetailsLoaded(productWithDetails));
+        emit(ProductDetailsLoaded(productWithDetails, allProducts: _cachedProducts));
         emit(const ProductOperationSuccess('Image added successfully'));
       }
     } catch (e) {
@@ -210,6 +210,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
+      _updateCachedProductsFromState(state);
       emit(ProductLoading());
       
       // Delete attachment from database
@@ -233,6 +234,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
+      _updateCachedProductsFromState(state);
       emit(ProductLoading());
       
       await productRepository.addNote(event.note);
@@ -240,7 +242,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       // Reload product details
       final productWithDetails = await productRepository.getProductWithDetails(event.note.productId);
       if (productWithDetails != null) {
-        emit(ProductDetailsLoaded(productWithDetails));
+        emit(ProductDetailsLoaded(productWithDetails, allProducts: _cachedProducts));
         emit(const ProductOperationSuccess('Note added successfully'));
       }
     } catch (e) {
@@ -253,19 +255,16 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
+      _updateCachedProductsFromState(state);
       emit(ProductLoading());
       
-      final success = await productRepository.updateNote(event.note);
+      await productRepository.updateNote(event.note);
       
-      if (success) {
-        // Reload product details
-        final productWithDetails = await productRepository.getProductWithDetails(event.note.productId);
-        if (productWithDetails != null) {
-          emit(ProductDetailsLoaded(productWithDetails));
-          emit(const ProductOperationSuccess('Note updated successfully'));
-        }
-      } else {
-        emit(const ProductError('Failed to update note'));
+      // Reload product details
+      final productWithDetails = await productRepository.getProductWithDetails(event.note.productId);
+      if (productWithDetails != null) {
+        emit(ProductDetailsLoaded(productWithDetails, allProducts: _cachedProducts));
+        emit(const ProductOperationSuccess('Note updated successfully'));
       }
     } catch (e) {
       emit(ProductError('Failed to update note: ${e.toString()}'));
@@ -277,15 +276,12 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
+      _updateCachedProductsFromState(state);
       emit(ProductLoading());
       
-      final success = await productRepository.deleteNote(event.noteId);
+      await productRepository.deleteNote(event.noteId);
       
-      if (success) {
-        emit(const ProductOperationSuccess('Note deleted successfully'));
-      } else {
-        emit(const ProductError('Failed to delete note'));
-      }
+      emit(const ProductOperationSuccess('Note deleted successfully'));
     } catch (e) {
       emit(ProductError('Failed to delete note: ${e.toString()}'));
     }
@@ -300,12 +296,12 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       
       if (event.query.isEmpty) {
         final products = await productRepository.getAllProductsWithDetails();
+        _cachedProducts = products;
         emit(ProductsLoaded(products));
       } else {
         final products = await productRepository.searchProducts(event.query);
+        final productsWithDetails = <ProductWithDetails>[];
         
-        // Load details for search results
-        final List<dynamic> productsWithDetails = [];
         for (final product in products) {
           final details = await productRepository.getProductWithDetails(product.id!);
           if (details != null) {
@@ -313,7 +309,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
           }
         }
         
-        emit(ProductSearchResults(productsWithDetails.cast(), event.query));
+        emit(ProductSearchResults(productsWithDetails, event.query));
       }
     } catch (e) {
       emit(ProductError('Failed to search products: ${e.toString()}'));
@@ -327,23 +323,18 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     try {
       emit(ProductLoading());
       
-      if (event.category == 'All') {
-        final products = await productRepository.getAllProductsWithDetails();
-        emit(ProductsLoaded(products));
-      } else {
-        final products = await productRepository.getProductsByCategory(event.category);
-        
-        // Load details for filtered results
-        final List<dynamic> productsWithDetails = [];
-        for (final product in products) {
-          final details = await productRepository.getProductWithDetails(product.id!);
-          if (details != null) {
-            productsWithDetails.add(details);
-          }
+      final products = await productRepository.getProductsByCategory(event.category);
+      final productsWithDetails = <ProductWithDetails>[];
+      
+      for (final product in products) {
+        final details = await productRepository.getProductWithDetails(product.id!);
+        if (details != null) {
+          productsWithDetails.add(details);
         }
-        
-        emit(ProductsFiltered(productsWithDetails.cast(), event.category));
       }
+      
+      _cachedProducts = productsWithDetails;
+      emit(ProductsFiltered(productsWithDetails, event.category));
     } catch (e) {
       emit(ProductError('Failed to filter products: ${e.toString()}'));
     }
@@ -356,16 +347,14 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     try {
       emit(ProductLoading());
       
-      final now = DateTime.now();
-      final futureDate = now.add(Duration(days: event.days));
+      final currentDate = AppDateUtils.formatDate(DateTime.now());
+      final futureDate = AppDateUtils.formatDate(
+        DateTime.now().add(Duration(days: event.days)),
+      );
       
-      final currentDateStr = DateTimeUtils.formatForDatabase(now);
-      final futureDateStr = DateTimeUtils.formatForDatabase(futureDate);
+      final products = await productRepository.getExpiringProducts(currentDate, futureDate);
+      final productsWithDetails = <ProductWithDetails>[];
       
-      final products = await productRepository.getExpiringProducts(currentDateStr, futureDateStr);
-      
-      // Load details for expiring products
-      final List<dynamic> productsWithDetails = [];
       for (final product in products) {
         final details = await productRepository.getProductWithDetails(product.id!);
         if (details != null) {
@@ -373,7 +362,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         }
       }
       
-      emit(ProductsLoaded(productsWithDetails.cast()));
+      emit(ExpiringProductsLoaded(productsWithDetails, event.days));
     } catch (e) {
       emit(ProductError('Failed to load expiring products: ${e.toString()}'));
     }

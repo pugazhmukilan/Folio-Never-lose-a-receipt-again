@@ -15,25 +15,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
-      icon: Icons.inventory_2_rounded,
+      icon: Icons.inventory_2_outlined,
       title: 'Welcome to Folio',
       description: 'Your personal warranty management assistant. Keep track of all your product warranties in one secure place.',
       color: const Color(0xFF007AFF),
     ),
     OnboardingPage(
-      icon: Icons.camera_alt_rounded,
+      icon: Icons.camera_alt_outlined,
       title: 'Smart Bill Scanning',
       description: 'Capture bills and receipts with your camera. Our OCR technology automatically extracts dates and important details.',
       color: const Color(0xFF5856D6),
     ),
     OnboardingPage(
-      icon: Icons.notifications_active_rounded,
+      icon: Icons.notifications_active_outlined,
       title: 'Never Miss an Expiry',
       description: 'Get timely reminders 30 days before your warranty expires. Stay protected and make claims on time.',
       color: const Color(0xFFFF9500),
     ),
     OnboardingPage(
-      icon: Icons.backup_rounded,
+      icon: Icons.backup_outlined,
       title: 'Backup & Restore',
       description: 'Safely backup all your warranties and restore them anytime. Your data is always secure and accessible.',
       color: const Color(0xFF34C759),
@@ -82,7 +82,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -143,7 +143,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   onPressed: _nextPage,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -167,6 +167,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   Widget _buildPage(OnboardingPage page, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
@@ -196,7 +197,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               fontSize: 28,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
-              color: isDark ? Colors.white : Colors.black,
+              color: colorScheme.onSurface,
               height: 1.2,
             ),
           ),
@@ -210,9 +211,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               fontSize: 17,
               fontWeight: FontWeight.w400,
               letterSpacing: -0.4,
-              color: isDark 
-                  ? Colors.white.withOpacity(0.7) 
-                  : Colors.black.withOpacity(0.6),
+              color: colorScheme.onSurfaceVariant,
               height: 1.4,
             ),
           ),

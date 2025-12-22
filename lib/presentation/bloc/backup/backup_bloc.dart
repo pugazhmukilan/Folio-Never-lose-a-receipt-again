@@ -19,15 +19,15 @@ class BackupBloc extends Bloc<BackupEvent, BackupState> {
     try {
       emit(BackupExporting());
       
-      // Export data to ZIP file
-      final zipFilePath = await backupService.exportData();
+      // Export data to backup archive file
+      final backupFilePath = await backupService.exportData();
       
       // Update last backup date in preferences
       await PreferencesHelper.setLastBackupDate(
         DateTime.now().toIso8601String(),
       );
       
-      emit(BackupExportSuccess(zipFilePath));
+      emit(BackupExportSuccess(backupFilePath));
     } catch (e) {
       emit(BackupError('Failed to export backup: ${e.toString()}'));
     }
@@ -40,8 +40,8 @@ class BackupBloc extends Bloc<BackupEvent, BackupState> {
     try {
       emit(BackupImporting());
       
-      // Import data from ZIP file
-      await backupService.importData(event.zipFilePath);
+      // Import data from backup input
+      await backupService.importData(event.backupPath);
       
       emit(const BackupImportSuccess('Data imported successfully'));
     } catch (e) {

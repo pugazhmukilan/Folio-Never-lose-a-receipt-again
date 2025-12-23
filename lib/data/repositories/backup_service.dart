@@ -73,7 +73,7 @@ class BackupService {
       // Zip the backup directory
       final encoder = ZipFileEncoder();
       encoder.create(zipFilePath);
-      await encoder.addDirectory(backupDir);
+      await encoder.addDirectory(backupDir, includeDirName: false);
       encoder.close();
       
       // Clean up temp backup directory
@@ -98,6 +98,7 @@ class BackupService {
       await extractDir.create(recursive: true);
       
       // Extract ZIP file
+      // Extract ZIP file
       final bytes = File(zipFilePath).readAsBytesSync();
       final archive = ZipDecoder().decodeBytes(bytes);
       
@@ -115,18 +116,36 @@ class BackupService {
         }
       }
       
-      // Read JSON data
-      final jsonFile = File(path.join(extractDir.path, AppConstants.backupDataFileName));
-      if (!await jsonFile.exists()) {
+      // Find data.json (handle both flat zip and nested folder zip)
+      File? jsonFile;
+      Directory? rootBackupDir;
+      
+      // Check root first
+      final rootDataFile = File(path.join(extractDir.path, AppConstants.backupDataFileName));
+      if (await rootDataFile.exists()) {
+        jsonFile = rootDataFile;
+        rootBackupDir = extractDir;
+      } else {
+        // Check subdirectories
+        final entities = await extractDir.list().toList();
+        for (final entity in entities) {
+          if (entity is Directory) {
+            final subDataFile = File(path.join(entity.path, AppConstants.backupDataFileName));
+            if (await subDataFile.exists()) {
+              jsonFile = subDataFile;
+              rootBackupDir = entity;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (jsonFile == null || rootBackupDir == null) {
         throw Exception('Invalid backup file: data.json not found');
       }
       
       final jsonContent = await jsonFile.readAsString();
       final Map<String, dynamic> backupData = jsonDecode(jsonContent);
-      
-      // Clear existing data
-      await productRepository.clearAllData();
-      await imageStorageService.clearAllImages();
       
       // Import products
       final List<dynamic> productsJson = backupData['products'] ?? [];
@@ -150,7 +169,7 @@ class BackupService {
       final List<dynamic> attachmentsJson = backupData['attachments'] ?? [];
       final imagesDir = await imageStorageService.getImagesDirectory();
       final imagesBackupDir = Directory(
-        path.join(extractDir.path, AppConstants.backupImagesFolder),
+        path.join(rootBackupDir.path, AppConstants.backupImagesFolder),
       );
       
       if (await imagesBackupDir.exists()) {

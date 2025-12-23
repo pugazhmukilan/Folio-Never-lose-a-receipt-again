@@ -2,11 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:warranty_vault/core/utils/image_actions.dart';
 import '../../data/models/product.dart';
 import '../bloc/product/product_bloc.dart';
 import '../bloc/product/product_event.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_utils.dart' as utils;
+import '../widgets/full_screen_image_viewer.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -50,19 +53,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'Add Product',
           style: TextStyle(
-            color: Colors.white,
+            color: colorScheme.onSurface,
             fontSize: 24,
             fontWeight: FontWeight.w700,
           ),
@@ -80,15 +86,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF252525),
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: theme.shadowColor == Colors.transparent
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,29 +106,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF6B6B).withOpacity(0.2),
+                            color: colorScheme.error.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.receipt_long, color: Color(0xFFFF6B6B), size: 24),
+                          child: Icon(Icons.receipt_long, color: colorScheme.error, size: 24),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Bill Image (Required)',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  color: colorScheme.onSurface,
                                 ),
                               ),
                               Text(
                                 'OCR extracts dates & amounts automatically',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                             ],
@@ -136,21 +144,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B6B).withOpacity(0.1),
+                          color: colorScheme.error.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: const Color(0xFFFF6B6B).withOpacity(0.3),
+                            color: colorScheme.error.withOpacity(0.3),
                             width: 2,
                           ),
                         ),
                         child: Column(
                           children: [
-                            const Icon(Icons.receipt_long, size: 48, color: Color(0xFFFF6B6B)),
+                            Icon(Icons.receipt_long, size: 48, color: colorScheme.error),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               'Bill Required',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: colorScheme.onSurface,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -159,7 +167,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             Text(
                               'Capture bill to extract information',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
+                                color: colorScheme.onSurface.withOpacity(0.7),
                                 fontSize: 14,
                               ),
                             ),
@@ -169,8 +177,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               icon: const Icon(Icons.camera_alt),
                               label: const Text('Capture Bill'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF6B6B),
-                                foregroundColor: Colors.white,
+                                backgroundColor: colorScheme.error,
+                                foregroundColor: colorScheme.onError,
                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                               ),
                             ),
@@ -188,13 +196,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           
                           return Stack(
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(imagePath),
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.cover,
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => FullScreenImageViewer(
+                                        imagePath: imagePath,
+                                        imageType: _imageTypes[index],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    File(imagePath),
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
                               // Image type badge
@@ -205,13 +225,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFF6B6B),
+                                      color: colorScheme.error,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'BILL',
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: colorScheme.onError,
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -223,11 +243,38 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 right: 4,
                                 child: GestureDetector(
                                   onTap: () => _removeImage(index),
-                                  child: const CircleAvatar(
+                                  child: CircleAvatar(
                                     radius: 12,
-                                    backgroundColor: Colors.red,
-                                    child: Icon(Icons.close, size: 16, color: Colors.white),
+                                    backgroundColor: colorScheme.error,
+                                    child: Icon(Icons.close, size: 16, color: colorScheme.onError),
                                   ),
+                                ),
+                              ),
+                              // Download and Share buttons
+                              Positioned(
+                                bottom: 4,
+                                right: 4,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => ImageActions.downloadImage(context, imagePath),
+                                      child: CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: Colors.black.withOpacity(0.6),
+                                        child: const Icon(Icons.download, color: Colors.white, size: 16),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    GestureDetector(
+                                      onTap: () => ImageActions.shareImage(context, imagePath, _imageTypes[index]),
+                                      child: CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: Colors.black.withOpacity(0.6),
+                                        child: const Icon(Icons.share, color: Colors.white, size: 16),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -240,13 +287,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: _captureImage,
-                              icon: const Icon(Icons.add_a_photo, color: Colors.black, size: 18),
-                              label: const Text(
+                              icon: Icon(Icons.add_a_photo, color: colorScheme.onPrimary, size: 18),
+                              label: Text(
                                 'Add More',
-                                style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.w600),
                               ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4ECDC4),
+                                backgroundColor: colorScheme.primary,
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -268,15 +315,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF252525),
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: theme.shadowColor == Colors.transparent
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -286,18 +335,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4ECDC4).withOpacity(0.2),
+                            color: colorScheme.primary.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.inventory_2, color: Color(0xFF4ECDC4), size: 24),
+                          child: Icon(Icons.inventory_2, color: colorScheme.primary, size: 24),
                         ),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'Product Details',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -307,20 +356,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       // Product Name
                       TextFormField(
                         controller: _nameController,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: colorScheme.onSurface),
                         decoration: InputDecoration(
                           labelText: 'Product Name',
-                          labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                          prefixIcon: Icon(Icons.shopping_bag_outlined, color: const Color(0xFF4ECDC4)),
+                          labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.6)),
+                          prefixIcon: Icon(Icons.shopping_bag_outlined, color: colorScheme.primary),
                           filled: true,
-                          fillColor: const Color(0xFF2A2A2A),
+                          fillColor: theme.scaffoldBackgroundColor,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide.none,
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFF4ECDC4), width: 2),
+                            borderSide: BorderSide(color: colorScheme.primary, width: 2),
                           ),
                         ),
                         validator: (value) {
@@ -336,21 +385,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       // Category Dropdown
                       DropdownButtonFormField<String>(
                         value: _selectedCategory,
-                        dropdownColor: const Color(0xFF2A2A2A),
-                        style: const TextStyle(color: Colors.white),
+                        dropdownColor: theme.scaffoldBackgroundColor,
+                        style: TextStyle(color: colorScheme.onSurface),
                         decoration: InputDecoration(
                           labelText: 'Category',
-                          labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                          prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF4ECDC4)),
+                          labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.6)),
+                          prefixIcon: Icon(Icons.category_outlined, color: colorScheme.primary),
                           filled: true,
-                          fillColor: const Color(0xFF2A2A2A),
+                          fillColor: theme.scaffoldBackgroundColor,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide.none,
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFF4ECDC4), width: 2),
+                            borderSide: BorderSide(color: colorScheme.primary, width: 2),
                           ),
                         ),
                         items: AppConstants.productCategories.map((category) {
@@ -372,7 +421,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2A2A2A),
+                          color: theme.scaffoldBackgroundColor,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: InkWell(
@@ -383,10 +432,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF4ECDC4).withOpacity(0.2),
+                                  color: colorScheme.primary.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Icon(Icons.calendar_today, color: Color(0xFF4ECDC4), size: 20),
+                                child: Icon(Icons.calendar_today, color: colorScheme.primary, size: 20),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -396,15 +445,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     Text(
                                       'Purchase Date',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.6),
+                                        color: colorScheme.onSurface.withOpacity(0.6),
                                         fontSize: 13,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       utils.DateTimeUtils.formatDisplayDate(_purchaseDate),
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: colorScheme.onSurface,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -412,7 +461,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   ],
                                 ),
                               ),
-                              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white.withOpacity(0.4)),
+                              Icon(Icons.arrow_forward_ios, size: 16, color: colorScheme.onSurface.withOpacity(0.4)),
                             ],
                           ),
                         ),
@@ -424,7 +473,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2A2A2A),
+                          color: theme.scaffoldBackgroundColor,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Column(
@@ -435,10 +484,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF4ECDC4).withOpacity(0.2),
+                                    color: colorScheme.primary.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Icons.timer, color: Color(0xFF4ECDC4), size: 20),
+                                  child: Icon(Icons.timer, color: colorScheme.primary, size: 20),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -448,15 +497,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       Text(
                                         'Warranty Duration',
                                         style: TextStyle(
-                                          color: Colors.white.withOpacity(0.6),
+                                          color: colorScheme.onSurface.withOpacity(0.6),
                                           fontSize: 13,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         '$_warrantyDuration months',
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: colorScheme.onSurface,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -468,13 +517,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ),
                             SliderTheme(
                               data: SliderThemeData(
-                                activeTrackColor: const Color(0xFF4ECDC4),
-                                inactiveTrackColor: const Color(0xFF3A3A3A),
-                                thumbColor: const Color(0xFF4ECDC4),
-                                overlayColor: const Color(0xFF4ECDC4).withOpacity(0.2),
-                                valueIndicatorColor: const Color(0xFF4ECDC4),
-                                valueIndicatorTextStyle: const TextStyle(
-                                  color: Colors.black,
+                                activeTrackColor: colorScheme.primary,
+                                inactiveTrackColor: colorScheme.outline.withOpacity(0.2),
+                                thumbColor: colorScheme.primary,
+                                overlayColor: colorScheme.primary.withOpacity(0.2),
+                                valueIndicatorColor: colorScheme.primary,
+                                valueIndicatorTextStyle: TextStyle(
+                                  color: colorScheme.onPrimary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -502,7 +551,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2A2A2A),
+                          color: theme.scaffoldBackgroundColor,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
@@ -510,10 +559,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4ECDC4).withOpacity(0.2),
+                                color: colorScheme.primary.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.event_available, color: Color(0xFF4ECDC4), size: 20),
+                              child: Icon(Icons.event_available, color: colorScheme.primary, size: 20),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -523,7 +572,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   Text(
                                     'Warranty Expires',
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.6),
+                                      color: colorScheme.onSurface.withOpacity(0.6),
                                       fontSize: 13,
                                     ),
                                   ),
@@ -532,8 +581,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     _expiryDate != null
                                         ? utils.DateTimeUtils.formatDisplayDate(_expiryDate!)
                                         : 'Not calculated',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: colorScheme.onSurface,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -556,15 +605,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 width: double.infinity,
                 height: 56,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4ECDC4), Color(0xFF44B9B0)],
+                  gradient: LinearGradient(
+                    colors: [colorScheme.primary, colorScheme.primary.withOpacity(0.8)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF4ECDC4).withOpacity(0.4),
+                      color: colorScheme.primary.withOpacity(0.4),
                       blurRadius: 15,
                       offset: const Offset(0, 8),
                     ),
@@ -572,11 +621,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 ),
                 child: ElevatedButton.icon(
                   onPressed: _saveProduct,
-                  icon: const Icon(Icons.save_rounded, color: Colors.black),
-                  label: const Text(
+                  icon: Icon(Icons.save_rounded, color: colorScheme.onPrimary),
+                  label: Text(
                     'Save Product',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: colorScheme.onPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -617,7 +666,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Bill captured successfully!'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppTheme.successGreen,
               duration: Duration(seconds: 2),
             ),
           );
@@ -650,9 +699,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (_imageTypes[index] == AppConstants.imageTypeBill && 
         _imageTypes.where((type) => type == AppConstants.imageTypeBill).length == 1) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot remove the only bill image. At least one bill is required.'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text('Cannot remove the only bill image. At least one bill is required.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -686,10 +735,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (_formKey.currentState!.validate()) {
       if (!_hasBillImage()) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bill image is required. Please capture the product bill.'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: const Text('Bill image is required. Please capture the product bill.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 3),
           ),
         );
         return;
@@ -719,7 +768,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Product saved successfully!'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppTheme.successGreen,
         ),
       );
       
@@ -731,28 +780,31 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return showDialog<String>(
       context: context,
       builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+
         return AlertDialog(
-          backgroundColor: const Color(0xFF2A2A2A),
-          title: const Text(
+          backgroundColor: theme.dialogBackgroundColor,
+          title: Text(
             'Select Image Type',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: colorScheme.onSurface),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.receipt_long, color: Color(0xFFFF6B6B)),
-                title: const Text('Bill', style: TextStyle(color: Colors.white)),
+                leading: Icon(Icons.receipt_long, color: colorScheme.error),
+                title: Text('Bill', style: TextStyle(color: colorScheme.onSurface)),
                 onTap: () => Navigator.of(context).pop(AppConstants.imageTypeBill),
               ),
               ListTile(
-                leading: const Icon(Icons.inventory_2, color: Color(0xFF4ECDC4)),
-                title: const Text('Product', style: TextStyle(color: Colors.white)),
+                leading: Icon(Icons.inventory_2, color: colorScheme.primary),
+                title: Text('Product', style: TextStyle(color: colorScheme.onSurface)),
                 onTap: () => Navigator.of(context).pop(AppConstants.imageTypeProduct),
               ),
               ListTile(
-                leading: const Icon(Icons.book, color: Color(0xFFFFA726)),
-                title: const Text('Manual', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.book, color: AppTheme.warningOrange),
+                title: Text('Manual', style: TextStyle(color: colorScheme.onSurface)),
                 onTap: () => Navigator.of(context).pop(AppConstants.imageTypeManual),
               ),
             ],

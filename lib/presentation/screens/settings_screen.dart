@@ -9,6 +9,8 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/preferences_helper.dart';
 import '../widgets/common_widgets.dart';
 import '../bloc/theme/theme_cubit.dart';
+import '../bloc/product/product_bloc.dart';
+import '../bloc/product/product_event.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -69,8 +71,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SnackBar(content: Text(state.message)),
             );
             
-            // Navigate back to home and reload
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            // Navigate back to home, which will trigger a reload on the home screen.
+            Navigator.of(context).pop(true); // Pop with a result
           }
           
           if (state is BackupError) {

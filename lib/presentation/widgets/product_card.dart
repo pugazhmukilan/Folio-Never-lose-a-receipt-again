@@ -4,6 +4,7 @@ import '../../data/models/product_with_details.dart';
 import '../../core/utils/date_utils.dart' as utils;
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/image_actions.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductWithDetails productWithDetails;
@@ -117,6 +118,55 @@ class ProductCard extends StatelessWidget {
                         ),
                       ),
                     
+                    // Action Buttons (Bottom Right)
+                    if (coverImagePath != null)
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.download, color: Colors.white, size: 16),
+                                onPressed: () {
+                                  final imagePaths = productWithDetails.attachments
+                                      .map((a) => a.imagePath)
+                                      .toList();
+                                  ImageActions.downloadImages(context, imagePaths, product.name);
+                                },
+                                tooltip: 'Download All Images',
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.all(6),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.share, color: Colors.white, size: 16),
+                                onPressed: () {
+                                  final imagePaths = productWithDetails.attachments
+                                      .map((a) => a.imagePath)
+                                      .toList();
+                                  ImageActions.shareImages(context, imagePaths, product.name);
+                                },
+                                tooltip: 'Share All Images',
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.all(6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Expiry Badge (Top Right)
                     Positioned(
                       top: 8,

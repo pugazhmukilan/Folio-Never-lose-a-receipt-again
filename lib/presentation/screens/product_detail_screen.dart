@@ -37,7 +37,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         title: const Text('Product Details'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit warranty',
             onPressed: () {
               final state = context.read<ProductBloc>().state;
@@ -47,7 +47,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.delete),
+            icon: const Icon(Icons.delete_outline),
             onPressed: () => _confirmDelete(context),
           ),
         ],
@@ -117,6 +117,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final warrantyMonths = product.warrantyMonths;
     
     final imagePaths = attachments.map((a) => a.imagePath).toList();
+    final imageTypes = attachments.map((a) => a.imageType).toList();
     
     return SingleChildScrollView(
       child: Column(
@@ -124,13 +125,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         children: [
           // Image Carousel
           if (imagePaths.isNotEmpty)
-            ImageCarousel(imagePaths: imagePaths)
+            ImageCarousel(
+              imagePaths: imagePaths,
+              imageTypes: imageTypes,
+            )
           else
             Container(
               height: 200,
               color: Colors.grey[300],
               child: const Center(
-                child: Icon(Icons.image_not_supported, size: 80),
+                child: Icon(Icons.image_not_supported_outlined, size: 80),
               ),
             ),
           
@@ -152,7 +156,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 // Category
                 Chip(
                   label: Text(product.category),
-                  avatar: const Icon(Icons.category, size: 16),
+                  avatar: const Icon(Icons.category_outlined, size: 16),
                 ),
                 
                 const SizedBox(height: 16),
@@ -164,7 +168,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     child: Column(
                       children: [
                         _buildDetailRow(
-                          icon: Icons.shopping_cart,
+                            icon: Icons.shopping_cart_outlined,
                           label: 'Purchase Date',
                           value: purchaseDate != null
                               ? utils.DateTimeUtils.formatDisplayDate(purchaseDate)
@@ -175,7 +179,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                           const SizedBox(height: 16),
                           _buildDetailRow(
-                            icon: Icons.timer,
+                            icon: Icons.timer_outlined,
                             label: 'Warranty Duration',
                             value: '$warrantyMonths months',
                           ),
@@ -184,7 +188,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                         const SizedBox(height: 16),
                         _buildDetailRow(
-                          icon: Icons.event_available,
+                            icon: Icons.event_available_outlined,
                           label: 'Warranty Expires',
                           value: expiryDate != null
                               ? utils.DateTimeUtils.formatDisplayDate(expiryDate)
@@ -194,7 +198,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                         const SizedBox(height: 16),
                         _buildDetailRow(
-                          icon: Icons.timer,
+                            icon: Icons.timer_outlined,
                           label: 'Status',
                           value: expiryDate != null
                               ? utils.DateTimeUtils.getExpiryStatusText(expiryDate)
@@ -209,6 +213,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                 ),
+
+                // if (productWithDetails.hasPendingBillExtraction) ...[
+                //   const SizedBox(height: 12),
+                //   SizedBox(
+                //     width: double.infinity,
+                //     child: ElevatedButton.icon(
+                //       onPressed: () {
+                //         context
+                //             .read<ProductBloc>()
+                //             .add(ExtractBillUsefulInfo(widget.productId));
+                //       },
+                //       icon: const Icon(Icons.auto_awesome_outlined),
+                //       label: const Text('Extract useful info'),
+                //     ),
+                //   ),
+                // ],
                 
                 const SizedBox(height: 16),
                 
@@ -224,7 +244,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     TextButton.icon(
                       onPressed: _addImage,
-                      icon: const Icon(Icons.add_a_photo),
+                      icon: const Icon(Icons.add_a_photo_outlined),
                       label: const Text('Add'),
                     ),
                   ],
@@ -260,13 +280,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 right: 4,
                                 child: CircleAvatar(
                                   radius: 12,
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: Theme.of(context).colorScheme.error,
                                   child: IconButton(
                                     padding: EdgeInsets.zero,
                                     iconSize: 16,
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.close,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onError,
                                     ),
                                     onPressed: () {
                                       _confirmDeleteAttachment(
@@ -313,7 +333,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Text(
                         'No notes yet',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -437,6 +459,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     required String value,
     Color? valueColor,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -444,10 +467,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 20, color: Colors.grey[700]),
+            child: Icon(icon, size: 20, color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -459,7 +482,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -468,7 +491,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: valueColor ?? Colors.black87,
+                    color: valueColor ?? colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -515,17 +538,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.receipt),
+                leading: const Icon(Icons.receipt_long_outlined),
                 title: const Text('Bill'),
                 onTap: () => Navigator.of(context).pop(AppConstants.imageTypeBill),
               ),
               ListTile(
-                leading: const Icon(Icons.inventory_2),
+                leading: const Icon(Icons.inventory_2_outlined),
                 title: const Text('Product'),
                 onTap: () => Navigator.of(context).pop(AppConstants.imageTypeProduct),
               ),
               ListTile(
-                leading: const Icon(Icons.book),
+                leading: const Icon(Icons.book_outlined),
                 title: const Text('Manual'),
                 onTap: () => Navigator.of(context).pop(AppConstants.imageTypeManual),
               ),

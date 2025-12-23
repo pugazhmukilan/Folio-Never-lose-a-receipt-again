@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:warranty_vault/presentation/bloc/product/product_bloc.dart';
+import 'package:warranty_vault/presentation/bloc/product/product_event.dart';
 import 'package:warranty_vault/presentation/screens/add_product_screen.dart';
 import 'package:warranty_vault/presentation/screens/products_list_screen.dart';
+import 'package:warranty_vault/presentation/screens/settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

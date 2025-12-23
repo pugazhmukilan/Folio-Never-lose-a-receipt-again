@@ -1,14 +1,18 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'full_screen_image_viewer.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/image_actions.dart';
 
 class ImageCarousel extends StatefulWidget {
   final List<String> imagePaths;
+  final List<String> imageTypes;
   final int initialIndex;
   
   const ImageCarousel({
     super.key,
     required this.imagePaths,
+    required this.imageTypes,
     this.initialIndex = 0,
   });
   
@@ -58,42 +62,84 @@ class _ImageCarouselState extends State<ImageCarousel> {
             },
             itemCount: widget.imagePaths.length,
             itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () {
-                  _showFullScreenImage(context, index);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
-                          width: 1,
-                        ),
-                      ),
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        _showFullScreenImage(context, index);
+                      },
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child: Image.file(
-                          File(widget.imagePaths[index]),
-                          fit: BoxFit.contain,
-                          cacheWidth: AppConstants.imageCacheWidthDetail,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.broken_image_outlined,
-                                size: 80,
-                                color: Colors.grey,
-                              ),
-                            );
-                          },
+                        child: Container(
+                          width: double.infinity,
+                          height: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                              width: 1,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.file(
+                              File(widget.imagePaths[index]),
+                              fit: BoxFit.contain,
+                              cacheWidth: AppConstants.imageCacheWidthDetail,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 80,
+                                    color: Colors.grey,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.download, color: Colors.white, size: 20),
+                              onPressed: () => ImageActions.downloadImage(context, widget.imagePaths[index]),
+                              tooltip: 'Download',
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(8),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                              onPressed: () => ImageActions.shareImage(context, widget.imagePaths[index], widget.imageTypes[index]),
+                              tooltip: 'Share',
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -123,77 +169,13 @@ class _ImageCarouselState extends State<ImageCarousel> {
     );
   }
   
-  void _showFullScreenImage(BuildContext context, int initialIndex) {
+  void _showFullScreenImage(BuildContext context, int index) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => FullScreenImageViewer(
-          imagePaths: widget.imagePaths,
-          initialIndex: initialIndex,
+          imagePath: widget.imagePaths[index],
+          imageType: widget.imageTypes[index],
         ),
-      ),
-    );
-  }
-}
-
-class FullScreenImageViewer extends StatefulWidget {
-  final List<String> imagePaths;
-  final int initialIndex;
-  
-  const FullScreenImageViewer({
-    super.key,
-    required this.imagePaths,
-    this.initialIndex = 0,
-  });
-  
-  @override
-  State<FullScreenImageViewer> createState() => _FullScreenImageViewerState();
-}
-
-class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
-  late PageController _pageController;
-  late int _currentIndex;
-  
-  @override
-  void initState() {
-    super.initState();
-    _currentIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: widget.initialIndex);
-  }
-  
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: Text('${_currentIndex + 1} / ${widget.imagePaths.length}'),
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        itemCount: widget.imagePaths.length,
-        itemBuilder: (context, index) {
-          return InteractiveViewer(
-            minScale: 0.5,
-            maxScale: 4.0,
-            child: Center(
-              child: Image.file(
-                File(widget.imagePaths[index]),
-                fit: BoxFit.contain,
-              ),
-            ),
-          );
-        },
       ),
     );
   }

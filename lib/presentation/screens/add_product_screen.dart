@@ -4,12 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:warranty_vault/core/utils/image_actions.dart';
 import '../../data/models/product.dart';
+import '../../data/models/rental_data.dart';
 import '../bloc/product/product_bloc.dart';
 import '../bloc/product/product_event.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_utils.dart' as utils;
 import '../widgets/full_screen_image_viewer.dart';
+import '../widgets/rental_fields_widget.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -27,6 +29,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   DateTime _purchaseDate = DateTime.now();
   int _warrantyDuration = 12;
   DateTime? _expiryDate;
+  RentalData? _rentalData;
 
   final List<String> _imagePaths = [];
   final List<String> _imageTypes = [];
@@ -173,9 +176,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
-                              onPressed: _captureImage,
-                              icon: const Icon(Icons.camera_alt),
-                              label: const Text('Capture Bill'),
+                              onPressed: _selectImageSource,
+                              icon: const Icon(Icons.add_photo_alternate),
+                              label: const Text('Add Bill Image'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colorScheme.error,
                                 foregroundColor: colorScheme.onError,
@@ -286,10 +289,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _captureImage,
-                              icon: Icon(Icons.add_a_photo, color: colorScheme.onPrimary, size: 18),
+                              onPressed: _selectImageSource,
+                              icon: Icon(Icons.add_photo_alternate, color: colorScheme.onPrimary, size: 18),
                               label: Text(
-                                'Add More',
+                                'Add More Images',
                                 style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.w600),
                               ),
                               style: ElevatedButton.styleFrom(
@@ -415,71 +418,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         },
                       ),
                       
-                      const SizedBox(height: 16),
-                      
-                      // Purchase Date
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: InkWell(
-                          onTap: _selectPurchaseDate,
-                          borderRadius: BorderRadius.circular(14),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.primary.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(Icons.calendar_today, color: colorScheme.primary, size: 20),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Purchase Date',
-                                      style: TextStyle(
-                                        color: colorScheme.onSurface.withOpacity(0.6),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      utils.DateTimeUtils.formatDisplayDate(_purchaseDate),
-                                      style: TextStyle(
-                                        color: colorScheme.onSurface,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(Icons.arrow_forward_ios, size: 16, color: colorScheme.onSurface.withOpacity(0.4)),
-                            ],
+                      // Warranty fields - Hide for House Rental
+                      if (_selectedCategory != 'House Rental') ...[
+                        const SizedBox(height: 16),
+                        
+                        // Purchase Date
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.scaffoldBackgroundColor,
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Warranty Duration
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                          child: InkWell(
+                            onTap: _selectPurchaseDate,
+                            borderRadius: BorderRadius.circular(14),
+                            child: Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(8),
@@ -487,7 +440,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     color: colorScheme.primary.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Icon(Icons.timer, color: colorScheme.primary, size: 20),
+                                  child: Icon(Icons.calendar_today, color: colorScheme.primary, size: 20),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -495,7 +448,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Warranty Duration',
+                                        'Purchase Date',
                                         style: TextStyle(
                                           color: colorScheme.onSurface.withOpacity(0.6),
                                           fontSize: 13,
@@ -503,7 +456,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '$_warrantyDuration months',
+                                        utils.DateTimeUtils.formatDisplayDate(_purchaseDate),
                                         style: TextStyle(
                                           color: colorScheme.onSurface,
                                           fontSize: 16,
@@ -513,91 +466,206 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     ],
                                   ),
                                 ),
+                                Icon(Icons.arrow_forward_ios, size: 16, color: colorScheme.onSurface.withOpacity(0.4)),
                               ],
                             ),
-                            SliderTheme(
-                              data: SliderThemeData(
-                                activeTrackColor: colorScheme.primary,
-                                inactiveTrackColor: colorScheme.outline.withOpacity(0.2),
-                                thumbColor: colorScheme.primary,
-                                overlayColor: colorScheme.primary.withOpacity(0.2),
-                                valueIndicatorColor: colorScheme.primary,
-                                valueIndicatorTextStyle: TextStyle(
-                                  color: colorScheme.onPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              child: Slider(
-                                value: _warrantyDuration.toDouble(),
-                                min: 3,
-                                max: 60,
-                                divisions: 19,
-                                label: '$_warrantyDuration months',
-                                onChanged: (value) {
-                                  setState(() {
-                                    _warrantyDuration = value.toInt();
-                                    _expiryDate = _computeExpiryDate();
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Expiry Date (Calculated)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(Icons.event_available, color: colorScheme.primary, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Warranty Duration
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.scaffoldBackgroundColor,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(
-                                    'Warranty Expires',
-                                    style: TextStyle(
-                                      color: colorScheme.onSurface.withOpacity(0.6),
-                                      fontSize: 13,
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
+                                    child: Icon(Icons.timer, color: colorScheme.primary, size: 20),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _expiryDate != null
-                                        ? utils.DateTimeUtils.formatDisplayDate(_expiryDate!)
-                                        : 'Not calculated',
-                                    style: TextStyle(
-                                      color: colorScheme.onSurface,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Warranty Duration',
+                                          style: TextStyle(
+                                            color: colorScheme.onSurface.withOpacity(0.6),
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '$_warrantyDuration months',
+                                          style: TextStyle(
+                                            color: colorScheme.onSurface,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
+                              SliderTheme(
+                                data: SliderThemeData(
+                                  activeTrackColor: colorScheme.primary,
+                                  inactiveTrackColor: colorScheme.outline.withOpacity(0.2),
+                                  thumbColor: colorScheme.primary,
+                                  overlayColor: colorScheme.primary.withOpacity(0.2),
+                                  valueIndicatorColor: colorScheme.primary,
+                                  valueIndicatorTextStyle: TextStyle(
+                                    color: colorScheme.onPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                child: Slider(
+                                  value: _warrantyDuration.toDouble(),
+                                  min: 3,
+                                  max: 60,
+                                  divisions: 19,
+                                  label: '$_warrantyDuration months',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _warrantyDuration = value.toInt();
+                                      _expiryDate = _computeExpiryDate();
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Expiry Date (Calculated)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.scaffoldBackgroundColor,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.event_available, color: colorScheme.primary, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Warranty Expires',
+                                      style: TextStyle(
+                                        color: colorScheme.onSurface.withOpacity(0.6),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _expiryDate != null
+                                          ? utils.DateTimeUtils.formatDisplayDate(_expiryDate!)
+                                          : 'Not calculated',
+                                      style: TextStyle(
+                                        color: colorScheme.onSurface,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                            // House Rental Fields (conditional)
+              if (_selectedCategory == 'House Rental') ...[
+                const SizedBox(height: 16),
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: theme.shadowColor == Colors.transparent
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.home_work, color: colorScheme.primary, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Rental Details',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'All fields are optional. Add only the information you want to track.',
+                        style: TextStyle(
+                          color: colorScheme.onSurface.withOpacity(0.6),
+                          fontSize: 13,
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      RentalFieldsWidget(
+                        initialData: _rentalData,
+                        onDataChanged: (data) {
+                          setState(() {
+                            _rentalData = data;
+                          });
+                        },
                       ),
                     ],
                   ),
                 ),
-              
-              
+              ],              
               const SizedBox(height: 24),
               
               // Save Button
@@ -647,10 +715,72 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
   
-  Future<void> _captureImage() async {
+  Future<void> _selectImageSource() async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Select Image Source',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: colorScheme.primary, size: 28),
+                title: Text('Camera', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                subtitle: Text('Take a photo', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: colorScheme.secondary, size: 28),
+                title: Text('Gallery', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                subtitle: Text('Choose from gallery', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted) return;
+
+    if (source != null) {
+      await _pickImage(source);
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.camera,
+        source: source,
         imageQuality: AppConstants.imageQuality,
       );
 
@@ -664,10 +794,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
         if (isBillImage) {
           imageType = AppConstants.imageTypeBill;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Bill captured successfully!'),
+            SnackBar(
+              content: Text(source == ImageSource.camera 
+                ? 'Bill captured successfully!' 
+                : 'Bill image added successfully!'),
               backgroundColor: AppTheme.successGreen,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
         } else {
@@ -685,7 +817,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to capture image: ${e.toString()}')),
+        SnackBar(content: Text('Failed to ${source == ImageSource.camera ? "capture" : "pick"} image: ${e.toString()}')),
       );
     }
   }
@@ -744,7 +876,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
         return;
       }
       
-      if (_expiryDate == null) {
+      // For House Rental, use current date as dummy dates since they're not relevant
+      final isRental = _selectedCategory == 'House Rental';
+      
+      if (!isRental && _expiryDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to calculate expiry date')),
         );
@@ -754,9 +889,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
       final product = Product(
         name: _nameController.text.trim(),
         category: _selectedCategory,
-        purchaseDate: utils.DateTimeUtils.formatISO(_purchaseDate),
-        expiryDate: utils.DateTimeUtils.formatISO(_expiryDate!),
-        warrantyMonths: _warrantyDuration,
+        purchaseDate: utils.DateTimeUtils.formatISO(isRental ? DateTime.now() : _purchaseDate),
+        expiryDate: utils.DateTimeUtils.formatISO(isRental ? DateTime.now() : _expiryDate!),
+        warrantyMonths: isRental ? null : _warrantyDuration,
+        rentalData: isRental ? _rentalData : null,
       );
       
       context.read<ProductBloc>().add(CreateProduct(

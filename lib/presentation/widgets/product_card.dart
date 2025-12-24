@@ -308,6 +308,8 @@ class ProductCard extends StatelessWidget {
         return Icons.build_outlined;
       case 'Jewelry':
         return Icons.diamond_outlined;
+      case 'House Rental':
+        return Icons.home_work_outlined;
       default:
         return Icons.category_outlined;
     }

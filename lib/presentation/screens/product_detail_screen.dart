@@ -2,13 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/note.dart';
 import '../../data/models/product_with_details.dart';
+import '../../data/models/rental_data.dart';
 import '../bloc/product/product_bloc.dart';
 import '../bloc/product/product_event.dart';
 import '../bloc/product/product_state.dart';
 import '../widgets/image_carousel.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/rental_fields_widget.dart';
 import '../../core/utils/date_utils.dart' as utils;
 import '../../core/constants/app_constants.dart';
 
@@ -36,14 +39,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       appBar: AppBar(
         title: const Text('Product Details'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit warranty',
-            onPressed: () {
-              final state = context.read<ProductBloc>().state;
+          // Show edit icon for both rental and non-rental categories
+          BlocBuilder<ProductBloc, ProductState>(
+            builder: (context, state) {
               if (state is ProductDetailsLoaded) {
-                _showEditWarrantyDialog(state.productWithDetails.product);
+                final product = state.productWithDetails.product;
+                if (product.category == 'House Rental') {
+                  // Edit rental data
+                  return IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Edit rental details',
+                    onPressed: () => _showEditRentalDialog(product),
+                  );
+                } else {
+                  // Edit warranty
+                  return IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Edit warranty',
+                    onPressed: () => _showEditWarrantyDialog(product),
+                  );
+                }
               }
+              return const SizedBox.shrink();
             },
           ),
           IconButton(
@@ -161,58 +178,59 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 
                 const SizedBox(height: 16),
                 
-                // Purchase & Expiry Details Card
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        _buildDetailRow(
-                            icon: Icons.shopping_cart_outlined,
-                          label: 'Purchase Date',
-                          value: purchaseDate != null
-                              ? utils.DateTimeUtils.formatDisplayDate(purchaseDate)
-                              : 'N/A',
-                        ),
-                        if (warrantyMonths != null) ...[
+                // Purchase & Expiry Details Card - Hide for House Rental
+                if (product.category != 'House Rental')
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          _buildDetailRow(
+                              icon: Icons.shopping_cart_outlined,
+                            label: 'Purchase Date',
+                            value: purchaseDate != null
+                                ? utils.DateTimeUtils.formatDisplayDate(purchaseDate)
+                                : 'N/A',
+                          ),
+                          if (warrantyMonths != null) ...[
+                            const SizedBox(height: 16),
+                            Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+                            const SizedBox(height: 16),
+                            _buildDetailRow(
+                              icon: Icons.timer_outlined,
+                              label: 'Warranty Duration',
+                              value: '$warrantyMonths months',
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                           const SizedBox(height: 16),
                           _buildDetailRow(
-                            icon: Icons.timer_outlined,
-                            label: 'Warranty Duration',
-                            value: '$warrantyMonths months',
+                              icon: Icons.event_available_outlined,
+                            label: 'Warranty Expires',
+                            value: expiryDate != null
+                                ? utils.DateTimeUtils.formatDisplayDate(expiryDate)
+                                : 'N/A',
+                          ),
+                          const SizedBox(height: 16),
+                          Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+                          const SizedBox(height: 16),
+                          _buildDetailRow(
+                              icon: Icons.timer_outlined,
+                            label: 'Status',
+                            value: expiryDate != null
+                                ? utils.DateTimeUtils.getExpiryStatusText(expiryDate)
+                                : 'N/A',
+                            valueColor: expiryDate != null
+                                ? (utils.DateTimeUtils.isExpired(expiryDate)
+                                    ? Colors.red
+                                    : Colors.green)
+                                : null,
                           ),
                         ],
-                        const SizedBox(height: 16),
-                        Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
-                        const SizedBox(height: 16),
-                        _buildDetailRow(
-                            icon: Icons.event_available_outlined,
-                          label: 'Warranty Expires',
-                          value: expiryDate != null
-                              ? utils.DateTimeUtils.formatDisplayDate(expiryDate)
-                              : 'N/A',
-                        ),
-                        const SizedBox(height: 16),
-                        Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
-                        const SizedBox(height: 16),
-                        _buildDetailRow(
-                            icon: Icons.timer_outlined,
-                          label: 'Status',
-                          value: expiryDate != null
-                              ? utils.DateTimeUtils.getExpiryStatusText(expiryDate)
-                              : 'N/A',
-                          valueColor: expiryDate != null
-                              ? (utils.DateTimeUtils.isExpired(expiryDate)
-                                  ? Colors.red
-                                  : Colors.green)
-                              : null,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
 
                 // if (productWithDetails.hasPendingBillExtraction) ...[
                 //   const SizedBox(height: 12),
@@ -229,8 +247,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 //     ),
                 //   ),
                 // ],
-                
-                const SizedBox(height: 16),
+                                // House Rental Details Section
+                if (product.category == 'House Rental' && product.rentalData != null)
+                  _buildRentalDetailsSection(product.rentalData!),
+                                const SizedBox(height: 16),
                 
                 // Images Section
                 Row(
@@ -453,6 +473,109 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
   
+  Future<void> _showEditRentalDialog(dynamic product) async {
+    if (product.rentalData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No rental data found')),
+      );
+      return;
+    }
+
+    RentalData? updatedRentalData = product.rentalData;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+              maxWidth: MediaQuery.of(context).size.width * 0.95,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Dialog Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      topRight: Radius.circular(4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Edit Rental Details',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Rental Fields
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: RentalFieldsWidget(
+                      initialData: product.rentalData,
+                      onDataChanged: (data) {
+                        updatedRentalData = data;
+                      },
+                    ),
+                  ),
+                ),
+                // Dialog Actions
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (updatedRentalData != null) {
+                            final updated = product.copyWith(
+                              rentalData: updatedRentalData,
+                            );
+                            context.read<ProductBloc>().add(UpdateProduct(updated));
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Rental details updated successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text('Save'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
   Widget _buildDetailRow({
     required IconData icon,
     required String label,
@@ -504,8 +627,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   
   Future<void> _addImage() async {
     try {
+      // Show dialog to select image source
+      final imageSource = await _showImageSourceDialog(context);
+      
+      if (imageSource == null) return;
+      
       final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.camera,
+        source: imageSource,
         imageQuality: AppConstants.imageQuality,
       );
       
@@ -526,6 +654,66 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         SnackBar(content: Text('Failed to add image: ${e.toString()}')),
       );
     }
+  }
+  
+  Future<ImageSource?> _showImageSourceDialog(BuildContext context) async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Title
+              const Text(
+                'Select Image Source',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Options
+              ListTile(
+                leading: const Icon(
+                  Icons.camera_alt_outlined,
+                  size: 28,
+                ),
+                title: const Text('Camera'),
+                subtitle: const Text('Take a photo'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.photo_library_outlined,
+                  size: 28,
+                ),
+                title: const Text('Gallery'),
+                subtitle: const Text('Choose from gallery'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
   }
   
   Future<String?> _showImageTypeDialog(BuildContext context) async {
@@ -665,5 +853,355 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         );
       },
     );
+  }
+  
+  Widget _buildRentalDetailsSection(RentalData rentalData) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        
+        // Tenant Information Card
+        if (rentalData.tenantName != null || rentalData.tenantPhone != null) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.person_outline, color: colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Tenant Information',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (rentalData.tenantName != null)
+                    _buildDetailRow(
+                      icon: Icons.person,
+                      label: 'Tenant Name',
+                      value: rentalData.tenantName!,
+                    ),
+                  if (rentalData.tenantPhone != null) ...[
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () => _makePhoneCall(rentalData.tenantPhone!),
+                      child: _buildDetailRow(
+                        icon: Icons.phone,
+                        label: 'Phone Number',
+                        value: rentalData.tenantPhone!,
+                        valueColor: colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                  if (rentalData.tenantEmail != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.email,
+                      label: 'Email',
+                      value: rentalData.tenantEmail!,
+                    ),
+                  ],
+                  if (rentalData.emergencyContact != null) ...[
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () => _makePhoneCall(rentalData.emergencyContact!),
+                      child: _buildDetailRow(
+                        icon: Icons.contact_phone,
+                        label: 'Emergency Contact',
+                        value: rentalData.emergencyContact!,
+                        valueColor: colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                  if (rentalData.familyMembers != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.family_restroom,
+                      label: 'Family Members',
+                      value: '${rentalData.familyMembers}',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+        
+        // Property Details Card
+        if (rentalData.propertyAddress != null || rentalData.propertyType != null) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.home_work, color: colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Property Details',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (rentalData.propertyAddress != null)
+                    _buildDetailRow(
+                      icon: Icons.location_on,
+                      label: 'Address',
+                      value: rentalData.propertyAddress!,
+                    ),
+                  if (rentalData.propertyType != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.home,
+                      label: 'Property Type',
+                      value: rentalData.propertyType!,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+        
+        // Financial Details Card
+        if (rentalData.monthlyRent != null || rentalData.securityDeposit != null) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.attach_money, color: colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Financial Details',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (rentalData.monthlyRent != null)
+                    _buildDetailRow(
+                      icon: Icons.currency_rupee,
+                      label: 'Monthly Rent',
+                      value: '₹${rentalData.monthlyRent}',
+                      valueColor: colorScheme.primary,
+                    ),
+                  if (rentalData.securityDeposit != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.account_balance_wallet,
+                      label: 'Security Deposit',
+                      value: '₹${rentalData.securityDeposit}',
+                    ),
+                  ],
+                  if (rentalData.paymentDueDate != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.calendar_today,
+                      label: 'Payment Due Date',
+                      value: 'Every ${rentalData.paymentDueDate}',
+                    ),
+                  ],
+                  if (rentalData.paymentMethod != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.payment,
+                      label: 'Payment Method',
+                      value: rentalData.paymentMethod!,
+                    ),
+                  ],
+                  
+                  // Extra Charges
+                  if (rentalData.extraCharges != null && rentalData.extraCharges!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Divider(height: 1, color: colorScheme.outline.withOpacity(0.3)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Extra Charges',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...rentalData.extraCharges!.entries.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              entry.key,
+                              style: TextStyle(color: colorScheme.onSurface),
+                            ),
+                            Text(
+                              '₹${entry.value}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    const SizedBox(height: 8),
+                    Divider(height: 1, color: colorScheme.outline.withOpacity(0.3)),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Monthly',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          '₹${rentalData.getTotalMonthlyCharges().toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+        
+        // Lease Information Card
+        if (rentalData.agreementNumber != null || rentalData.lockInPeriodMonths != null) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.description, color: colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Lease Information',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (rentalData.agreementNumber != null)
+                    _buildDetailRow(
+                      icon: Icons.numbers,
+                      label: 'Agreement Number',
+                      value: rentalData.agreementNumber!,
+                    ),
+                  if (rentalData.lockInPeriodMonths != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.lock_clock,
+                      label: 'Lock-in Period',
+                      value: '${rentalData.lockInPeriodMonths} months',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+        
+        // Utilities Card
+        if (rentalData.electricityMeterReading != null || 
+            rentalData.waterMeterReading != null || 
+            rentalData.gasConnectionNumber != null) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.electrical_services, color: colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Utilities',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (rentalData.electricityMeterReading != null)
+                    _buildDetailRow(
+                      icon: Icons.bolt,
+                      label: 'Electricity Meter',
+                      value: rentalData.electricityMeterReading!,
+                    ),
+                  if (rentalData.waterMeterReading != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.water_drop,
+                      label: 'Water Meter',
+                      value: rentalData.waterMeterReading!,
+                    ),
+                  ],
+                  if (rentalData.gasConnectionNumber != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailRow(
+                      icon: Icons.local_fire_department,
+                      label: 'Gas Connection',
+                      value: rentalData.gasConnectionNumber!,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+  
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch phone dialer')),
+      );
+    }
   }
 }

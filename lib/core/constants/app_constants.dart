@@ -5,7 +5,7 @@ class AppConstants {
   
   // Database
   static const String databaseName = 'warranty_vault.db';
-  static const int databaseVersion = 3;  // v2: reserved, v3: warranty_months
+  static const int databaseVersion = 4;  // v2: reserved, v3: warranty_months, v4: rental_data
   
   // Tables
   static const String tableProducts = 'products';
@@ -23,6 +23,7 @@ class AppConstants {
     'Fashion',
     'Sports & Outdoors',
     'Books & Media',
+    'House Rental',
     'Other',
   ];
   

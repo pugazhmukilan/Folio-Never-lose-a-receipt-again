@@ -56,6 +56,14 @@ class DatabaseHelper {
           ADD COLUMN warranty_months INTEGER
         ''');
       }
+      
+      final hasRentalData = columns.any((c) => c['name'] == 'rental_data');
+      if (!hasRentalData) {
+        await db.execute('''
+          ALTER TABLE ${AppConstants.tableProducts}
+          ADD COLUMN rental_data TEXT
+        ''');
+      }
     } catch (_) {
       // If anything goes wrong (e.g., table doesn't exist yet during initial create),
       // ignore here; create/migration paths will handle it.
@@ -73,7 +81,8 @@ class DatabaseHelper {
         expiry_date TEXT NOT NULL,
         warranty_months INTEGER,
         category TEXT NOT NULL,
-        notification_id INTEGER
+        notification_id INTEGER,
+        rental_data TEXT
       )
     ''');
     
@@ -125,6 +134,14 @@ class DatabaseHelper {
       await db.execute('''
         ALTER TABLE ${AppConstants.tableProducts}
         ADD COLUMN warranty_months INTEGER
+      ''');
+    }
+    
+    // Upgrade from version 3 to 4: Add rental data for House Rental category
+    if (oldVersion < 4) {
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableProducts}
+        ADD COLUMN rental_data TEXT
       ''');
     }
   }

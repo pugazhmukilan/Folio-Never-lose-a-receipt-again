@@ -181,6 +181,8 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   }
 
   Widget _buildTopBar(ColorScheme colorScheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 40, 20, 10),
       child: Row(
@@ -189,18 +191,28 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                AppConstants.appName,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                  letterSpacing: -1,
-                ),
+              Row(
+                children: [
+                  Image.asset(
+                    isDark ? 'assets/darklogo.png' : 'assets/light_logo.png',
+                    height: 28,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Kipt',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurface,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 2),
               Text(
-                'Manage your warranties',
+                'Never loose your receipt again',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,

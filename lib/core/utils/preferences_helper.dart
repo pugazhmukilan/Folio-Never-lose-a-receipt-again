@@ -81,6 +81,17 @@ class PreferencesHelper {
         AppConstants.sortByDateAdded;
   }
   
+  // App Lock
+  static const String _keyAppLock = 'app_lock_enabled';
+  
+  static bool isAppLockEnabled() {
+    return instance.getBool(_keyAppLock) ?? false;
+  }
+  
+  static Future<void> setAppLock(bool enabled) async {
+    await instance.setBool(_keyAppLock, enabled);
+  }
+  
   // Clear all preferences
   static Future<void> clearAll() async {
     await instance.clear();

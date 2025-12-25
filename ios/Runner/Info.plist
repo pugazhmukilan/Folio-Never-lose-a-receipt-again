@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>WarrantyVault</string>
+	<string>Kipt</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -31,11 +31,15 @@
 	
 	<!-- Camera and Photo Library Permissions -->
 	<key>NSCameraUsageDescription</key>
-	<string>WarrantyVault needs camera access to scan bills and capture product photos</string>
+	<string>Kipt needs camera access to scan bills and capture product photos</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>WarrantyVault needs photo library access to save and retrieve product images</string>
+	<string>Kipt needs photo library access to save and retrieve product images</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>WarrantyVault needs permission to save captured images to your photo library</string>
+	<string>Kipt needs permission to save captured images to your photo library</string>
+	
+	<!-- Biometric Authentication Permission -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Kipt uses Face ID/Touch ID to secure your data and protect your privacy</string>
 	
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

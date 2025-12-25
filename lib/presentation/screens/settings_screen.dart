@@ -9,8 +9,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/preferences_helper.dart';
 import '../widgets/common_widgets.dart';
 import '../bloc/theme/theme_cubit.dart';
-import '../bloc/product/product_bloc.dart';
-import '../bloc/product/product_event.dart';
+import '../../data/repositories/auth_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -159,6 +158,81 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: _changeDefaultWarranty,
                       ),
                     ],
+                  ),
+                ),
+                
+                // Security Section
+                _buildSectionHeader('Security'),
+                Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: FutureBuilder<bool>(
+                    future: AuthService().isAuthenticationAvailable(),
+                    builder: (context, snapshot) {
+                      final isAvailable = snapshot.data ?? false;
+                      
+                      return SwitchListTile(
+                        secondary: const Icon(Icons.lock_outline),
+                        title: const Text('App Lock'),
+                        subtitle: Text(
+                          isAvailable
+                              ? 'Secure app with biometric or PIN'
+                              : 'No device security available. Please set up PIN, pattern, or biometric in device settings.',
+                        ),
+                        value: AuthService.isAppLockEnabled(),
+                        onChanged: isAvailable
+                            ? (value) async {
+                                if (value) {
+                                  // Test authentication before enabling
+                                  final authService = AuthService();
+                                  try {
+                                    final authenticated = await authService.authenticate();
+                                    
+                                    if (authenticated) {
+                                      await AuthService.setAppLock(true);
+                                      setState(() {});
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('App lock enabled successfully'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Authentication failed. Please try again.'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                } else {
+                                  await AuthService.setAppLock(false);
+                                  setState(() {});
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('App lock disabled'),
+                                      ),
+                                    );
+                                  }
+                                }
+                              }
+                            : null,
+                      );
+                    },
                   ),
                 ),
                 

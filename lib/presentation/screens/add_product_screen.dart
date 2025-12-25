@@ -58,6 +58,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -72,7 +73,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           'Add Product',
           style: TextStyle(
             color: colorScheme.onSurface,
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),

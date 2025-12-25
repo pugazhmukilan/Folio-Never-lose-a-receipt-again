@@ -14,6 +14,7 @@ import '../widgets/common_widgets.dart';
 import '../widgets/rental_fields_widget.dart';
 import '../../core/utils/date_utils.dart' as utils;
 import '../../core/constants/app_constants.dart';
+import '../../data/repositories/pdf_service.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final int productId;
@@ -37,7 +38,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Product Details'),
+        title: const Text(
+          'Product Details',
+          style: TextStyle(fontSize: 18),
+        ),
         actions: [
           // Show edit icon for both rental and non-rental categories
           BlocBuilder<ProductBloc, ProductState>(
@@ -59,6 +63,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     onPressed: () => _showEditWarrantyDialog(product),
                   );
                 }
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+          BlocBuilder<ProductBloc, ProductState>(
+            builder: (context, state) {
+              if (state is ProductDetailsLoaded) {
+                return IconButton(
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  tooltip: 'Export as PDF',
+                  onPressed: () => _exportToPdf(state.productWithDetails),
+                );
               }
               return const SizedBox.shrink();
             },
@@ -822,6 +838,87 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         );
       },
     );
+  }
+  
+  Future<void> _exportToPdf(ProductWithDetails productWithDetails) async {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Generating PDF...')),
+      );
+      
+      final pdfService = PdfService();
+      final pdfFile = await pdfService.generateProductPdf(productWithDetails);
+      
+      if (!mounted) return;
+      
+      // Show options bottom sheet
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) {
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurface.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'PDF Generated Successfully',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Icon(Icons.share, color: colorScheme.primary, size: 28),
+                  title: Text('Share PDF', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Share via email, messaging, etc.', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await pdfService.sharePdf(pdfFile);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.print, color: colorScheme.secondary, size: 28),
+                  title: Text('Print PDF', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Print or save to device', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await pdfService.printPdf(pdfFile);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to generate PDF: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
   
   void _confirmDelete(BuildContext context) {

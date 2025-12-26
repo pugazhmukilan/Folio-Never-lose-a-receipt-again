@@ -167,45 +167,46 @@ class ProductCard extends StatelessWidget {
                         ),
                       ),
 
-                    // Expiry Badge (Top Right)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.scrim.withOpacity(0.55),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: expiryColor.withOpacity(0.5),
-                            width: 1,
+                    // Expiry Badge (Top Right) - Don't show for House Rental
+                    if (product.category != 'House Rental')
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.scrim.withOpacity(0.55),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: expiryColor.withOpacity(0.5),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                expiryIcon,
+                                size: 12,
+                                color: expiryColor,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                expiryText,
+                                style: TextStyle(
+                                  color: expiryColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              expiryIcon,
-                              size: 12,
-                              color: expiryColor,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              expiryText,
-                              style: TextStyle(
-                                color: expiryColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
-                    ),
                   ],
                 ),
                 

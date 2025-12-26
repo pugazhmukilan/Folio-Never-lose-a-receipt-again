@@ -16,27 +16,23 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       icon: Icons.inventory_2_outlined,
-      title: 'Welcome to Folio',
-      description: 'Your personal warranty management assistant. Keep track of all your product warranties in one secure place.',
-      color: const Color(0xFF007AFF),
+      title: 'Manage Warranties',
+      description: 'Keep track of all your product warranties and important documents in one organized place.',
     ),
     OnboardingPage(
       icon: Icons.camera_alt_outlined,
-      title: 'Smart Bill Scanning',
-      description: 'Capture bills and receipts with your camera. Our OCR technology automatically extracts dates and important details.',
-      color: const Color(0xFF5856D6),
+      title: 'Scan Documents',
+      description: 'Quickly capture bills and receipts. Automatically extract dates and key information.',
     ),
     OnboardingPage(
-      icon: Icons.notifications_active_outlined,
-      title: 'Never Miss an Expiry',
-      description: 'Get timely reminders 30 days before your warranty expires. Stay protected and make claims on time.',
-      color: const Color(0xFFFF9500),
+      icon: Icons.notifications_outlined,
+      title: 'Expiry Reminders',
+      description: 'Receive timely notifications before your warranties expire. Never miss a claim deadline.',
     ),
     OnboardingPage(
-      icon: Icons.backup_outlined,
-      title: 'Backup & Restore',
-      description: 'Safely backup all your warranties and restore them anytime. Your data is always secure and accessible.',
-      color: const Color(0xFF34C759),
+      icon: Icons.security_outlined,
+      title: 'Secure Backup',
+      description: 'Your data is safely backed up and can be restored anytime. Complete peace of mind.',
     ),
   ];
 
@@ -88,21 +84,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           children: [
             // Skip button
             Padding(
-              padding: const EdgeInsets.only(top: 16, right: 16),
+              padding: const EdgeInsets.only(top: 8, right: 8),
               child: Align(
                 alignment: Alignment.topRight,
                 child: TextButton(
                   onPressed: _skip,
                   style: TextButton.styleFrom(
-                    foregroundColor: colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    foregroundColor: colorScheme.onSurfaceVariant,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                   child: const Text(
                     'Skip',
                     style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: -0.4,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -135,26 +130,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             
             // Next/Get Started button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
               child: SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 48,
                 child: ElevatedButton(
                   onPressed: _nextPage,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: 0,
                   ),
                   child: Text(
-                    _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
+                    _currentPage == _pages.length - 1 ? 'Get Started' : 'Continue',
                     style: const TextStyle(
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      letterSpacing: -0.4,
                     ),
                   ),
                 ),
@@ -169,34 +163,34 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Widget _buildPage(OnboardingPage page, bool isDark) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Icon
           Container(
-            width: 120,
-            height: 120,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
-              shape: BoxShape.circle,
+              color: colorScheme.primaryContainer.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
               page.icon,
-              size: 60,
-              color: page.color,
+              size: 40,
+              color: colorScheme.primary,
             ),
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 40),
           
           // Title
           Text(
             page.title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.5,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
               color: colorScheme.onSurface,
               height: 1.2,
             ),
@@ -208,11 +202,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             page.description,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: FontWeight.w400,
-              letterSpacing: -0.4,
               color: colorScheme.onSurfaceVariant,
-              height: 1.4,
+              height: 1.5,
             ),
           ),
         ],
@@ -240,12 +233,10 @@ class OnboardingPage {
   final IconData icon;
   final String title;
   final String description;
-  final Color color;
 
   OnboardingPage({
     required this.icon,
     required this.title,
     required this.description,
-    required this.color,
   });
 }

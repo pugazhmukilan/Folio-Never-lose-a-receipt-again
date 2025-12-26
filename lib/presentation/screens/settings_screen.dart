@@ -10,6 +10,7 @@ import '../../core/utils/preferences_helper.dart';
 import '../widgets/common_widgets.dart';
 import '../bloc/theme/theme_cubit.dart';
 import '../../data/repositories/auth_service.dart';
+import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -70,8 +71,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SnackBar(content: Text(state.message)),
             );
             
-            // Navigate back to home, which will trigger a reload on the home screen.
-            Navigator.of(context).pop(true); // Pop with a result
+            // Navigate back to trigger reload in ProductsListScreen
+            Navigator.of(context).pop(true); // Pop with result to trigger reload
           }
           
           if (state is BackupError) {
@@ -250,9 +251,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.description_outlined),
-                        title: const Text('About WarrantyVault'),
+                        title: const Text('About Folio'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: _showAboutDialog,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const AboutScreen(),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -483,57 +490,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Navigator.of(context).pop();
               },
               child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-  
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('About WarrantyVault'),
-          content: const SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'WarrantyVault',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text('Version ${AppConstants.appVersion}'),
-                SizedBox(height: 16),
-                Text(
-                  'An offline-first mobile application for managing product warranties, bills, and receipts.',
-                  style: TextStyle(height: 1.5),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Features:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text('• Scan bills with OCR'),
-                Text('• Store product images'),
-                Text('• Track warranty expiry'),
-                Text('• Get expiry reminders'),
-                Text('• Backup & restore data'),
-                Text('• 100% offline'),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
             ),
           ],
         );

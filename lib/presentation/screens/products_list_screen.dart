@@ -15,7 +15,14 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_utils.dart' as utils;
 
 class ProductsListScreen extends StatefulWidget {
-  const ProductsListScreen({super.key});
+  final VoidCallback? onSettingsNavigationStart;
+  final VoidCallback? onSettingsNavigationEnd;
+  
+  const ProductsListScreen({
+    super.key,
+    this.onSettingsNavigationStart,
+    this.onSettingsNavigationEnd,
+  });
 
   @override
   State<ProductsListScreen> createState() => _ProductsListScreenState();
@@ -77,7 +84,8 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           }
         },
         builder: (context, state) {
-          if (state is ProductLoading || state is ProductOperationSuccess) {
+          // Only show loading for ProductLoading, not for ProductOperationSuccess
+          if (state is ProductLoading) {
             return const LoadingIndicator(message: 'Loading products...');
           }
 
@@ -105,16 +113,10 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           } else if (state is ProductDetailsLoaded) {
             // Use cached products list if available when returning from detail view
             products = state.allProducts ?? [];
-          }
-
-          // Check if truly empty (no products in database at all)
-          bool isTrulyEmpty = state is ProductsLoaded &&
-              products.isEmpty &&
-              !isFiltered &&
-              !isSearching;
-
-          if (isTrulyEmpty) {
-            return _buildEmptyState(colorScheme);
+          } else if (state is ProductInitial) {
+            // If in initial state, load products
+            context.read<ProductBloc>().add(LoadProducts());
+            return const LoadingIndicator(message: 'Loading products...');
           }
 
           return FadeTransition(
@@ -230,12 +232,23 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                 color: colorScheme.onSurface,
                 size: 22,
               ),
-              onPressed: () {
-                Navigator.of(context).push(
+              onPressed: () async {
+                // Notify that settings navigation is starting
+                widget.onSettingsNavigationStart?.call();
+                
+                final result = await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const SettingsScreen(),
                   ),
                 );
+                
+                // Notify that settings navigation ended
+                widget.onSettingsNavigationEnd?.call();
+                
+                // If data was imported (result == true), reload products
+                if (result == true && mounted) {
+                  context.read<ProductBloc>().add(LoadProducts());
+                }
               },
             ),
           ),
@@ -554,11 +567,15 @@ class _ProductsListScreenState extends State<ProductsListScreen>
 
   Widget _buildInlineEmptyMessage(ColorScheme colorScheme,
       {required bool isFiltered, required bool isSearching}) {
-    String message = "No products found.";
+    String message = "No products yet. Tap the + button below to add your first product warranty.";
+    IconData icon = Icons.inbox_outlined;
+    
     if (isSearching) {
       message = "No products match your search for '$_searchQuery'.";
+      icon = Icons.search_off;
     } else if (isFiltered) {
       message = "No products found in the '$_selectedCategory' category.";
+      icon = Icons.search_off;
     }
 
     return Center(
@@ -566,17 +583,20 @@ class _ProductsListScreenState extends State<ProductsListScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.search_off,
+            icon,
             size: 60,
             color: colorScheme.onSurfaceVariant.withOpacity(0.7),
           ),
           const SizedBox(height: 16),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: colorScheme.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],

@@ -5,12 +5,13 @@ class AppConstants {
   
   // Database
   static const String databaseName = 'warranty_vault.db';
-  static const int databaseVersion = 4;  // v2: reserved, v3: warranty_months, v4: rental_data
+  static const int databaseVersion = 5;  // v2: reserved, v3: warranty_months, v4: rental_data, v5: categories
   
   // Tables
   static const String tableProducts = 'products';
   static const String tableAttachments = 'attachments';
   static const String tableNotes = 'notes';
+  static const String tableCategories = 'categories';
   
   // Product Categories
   static const List<String> productCategories = [
@@ -31,6 +32,7 @@ class AppConstants {
   static const String imageTypeBill = 'bill';
   static const String imageTypeProduct = 'product';
   static const String imageTypeManual = 'manual';
+  static const String imageTypePdf = 'pdf';
   
   // Warranty Durations (in months)
   static const List<int> warrantyDurations = [

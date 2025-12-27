@@ -2,9 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:warranty_vault/core/utils/image_actions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/rental_data.dart';
+import '../../data/models/category.dart';
+import '../../data/database/database_helper.dart';
 import '../bloc/product/product_bloc.dart';
 import '../bloc/product/product_event.dart';
 import '../../core/constants/app_constants.dart';
@@ -24,8 +28,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _imagePicker = ImagePicker();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  String _selectedCategory = AppConstants.productCategories[0];
+  List<Category> _categories = [];
+  String _selectedCategory = '';
+  bool _isRentalCategory = false;
   DateTime _purchaseDate = DateTime.now();
   int _warrantyDuration = 12;
   DateTime? _expiryDate;
@@ -37,8 +44,35 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   void initState() {
     super.initState();
+    _loadCategories();
     // Avoid setState() in initState; compute directly.
     _expiryDate = _computeExpiryDate();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload categories whenever this screen becomes visible
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _dbHelper.getAllCategories();
+      setState(() {
+        _categories = categories;
+        if (_categories.isNotEmpty) {
+          _selectedCategory = _categories[0].name;
+          _isRentalCategory = _categories[0].isRentalType;
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading categories: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -58,7 +92,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -197,31 +230,47 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         children: _imagePaths.asMap().entries.map((entry) {
                           final index = entry.key;
                           final imagePath = entry.value;
+                          final isPdf = _imageTypes[index] == AppConstants.imageTypePdf;
                           
                           return Stack(
                             children: [
                               GestureDetector(
                                 onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => FullScreenImageViewer(
-                                        imagePath: imagePath,
-                                        imageType: _imageTypes[index],
+                                  if (isPdf) {
+                                    // TODO: Open PDF viewer
+                                  } else {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => FullScreenImageViewer(
+                                          imagePath: imagePath,
+                                          imageType: _imageTypes[index],
+                                        ),
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  }
                                 },
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(
-                                    File(imagePath),
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: isPdf
+                                      ? Container(
+                                          width: 100,
+                                          height: 100,
+                                          color: Colors.red.shade50,
+                                          child: const Icon(
+                                            Icons.picture_as_pdf,
+                                            size: 50,
+                                            color: Colors.red,
+                                          ),
+                                        )
+                                      : Image.file(
+                                          File(imagePath),
+                                          width: 100,
+                                          height: 100,
+                                          fit: BoxFit.cover,
+                                        ),
                                 ),
                               ),
-                              // Image type badge
+                              // Image/PDF type badge
                               if (_imageTypes[index] == AppConstants.imageTypeBill)
                                 Positioned(
                                   top: 4,
@@ -242,6 +291,26 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     ),
                                   ),
                                 ),
+                              if (isPdf)
+                                Positioned(
+                                  top: 4,
+                                  left: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'PDF',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               Positioned(
                                 top: 4,
                                 right: 4,
@@ -255,26 +324,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ),
                               ),
                               // Download and Share buttons
-                              Positioned(
-                                bottom: 4,
-                                right: 4,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () => ImageActions.downloadImage(context, imagePath),
-                                      child: CircleAvatar(
-                                        radius: 14,
-                                        backgroundColor: Colors.black.withOpacity(0.6),
-                                        child: const Icon(Icons.download, color: Colors.white, size: 16),
+                              if (!isPdf)
+                                Positioned(
+                                  bottom: 4,
+                                  right: 4,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () => ImageActions.downloadImage(context, imagePath),
+                                        child: CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: Colors.black.withOpacity(0.6),
+                                          child: const Icon(Icons.download, color: Colors.white, size: 16),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    GestureDetector(
-                                      onTap: () => ImageActions.shareImage(context, imagePath, _imageTypes[index]),
-                                      child: CircleAvatar(
-                                        radius: 14,
-                                        backgroundColor: Colors.black.withOpacity(0.6),
+                                      const SizedBox(width: 4),
+                                      GestureDetector(
+                                        onTap: () => ImageActions.shareImage(context, imagePath, _imageTypes[index]),
+                                        child: CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: Colors.black.withOpacity(0.6),
                                         child: const Icon(Icons.share, color: Colors.white, size: 16),
                                       ),
                                     ),
@@ -388,7 +458,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       
                       // Category Dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        value: _categories.isNotEmpty ? _selectedCategory : null,
                         dropdownColor: theme.scaffoldBackgroundColor,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: InputDecoration(
@@ -406,21 +476,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             borderSide: BorderSide(color: colorScheme.primary, width: 2),
                           ),
                         ),
-                        items: AppConstants.productCategories.map((category) {
+                        items: _categories.map((category) {
                           return DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
+                            value: category.name,
+                            child: Text(category.name),
                           );
                         }).toList(),
                         onChanged: (value) {
                           setState(() {
                             _selectedCategory = value!;
+                            final selectedCat = _categories.firstWhere((c) => c.name == value);
+                            _isRentalCategory = selectedCat.isRentalType;
                           });
                         },
                       ),
                       
-                      // Warranty fields - Hide for House Rental
-                      if (_selectedCategory != 'House Rental') ...[
+                      // Warranty fields - Hide for Rental categories
+                      if (!_isRentalCategory) ...[
                         const SizedBox(height: 16),
                         
                         // Purchase Date
@@ -603,8 +675,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ],
                   ),
                 ),
-                            // House Rental Fields (conditional)
-              if (_selectedCategory == 'House Rental') ...[
+              // Rental Fields (conditional)
+              if (_isRentalCategory) ...[
                 const SizedBox(height: 16),
                 Container(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -720,7 +792,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+    final String? choice = await showModalBottomSheet<String>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -743,7 +815,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Select Image Source',
+                  'Select Attachment Source',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -756,13 +828,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 leading: Icon(Icons.camera_alt, color: colorScheme.primary, size: 28),
                 title: Text('Camera', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600)),
                 subtitle: Text('Take a photo', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
-                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+                onTap: () => Navigator.of(context).pop('camera'),
               ),
               ListTile(
                 leading: Icon(Icons.photo_library, color: colorScheme.secondary, size: 28),
                 title: Text('Gallery', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600)),
                 subtitle: Text('Choose from gallery', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
-                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+                onTap: () => Navigator.of(context).pop('gallery'),
+              ),
+              ListTile(
+                leading: Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+                title: Text('PDF Document', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                subtitle: Text('Pick a PDF file', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
+                onTap: () => Navigator.of(context).pop('pdf'),
               ),
               const SizedBox(height: 16),
             ],
@@ -773,8 +851,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     if (!mounted) return;
 
-    if (source != null) {
-      await _pickImage(source);
+    if (choice == 'camera') {
+      await _pickImage(ImageSource.camera);
+    } else if (choice == 'gallery') {
+      await _pickImage(ImageSource.gallery);
+    } else if (choice == 'pdf') {
+      await _pickPdfDocument();
     }
   }
 
@@ -819,6 +901,50 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to ${source == ImageSource.camera ? "capture" : "pick"} image: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _pickPdfDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (!mounted) return;
+
+      if (result != null && result.files.single.path != null) {
+        final String sourcePath = result.files.single.path!;
+        
+        // Copy PDF to app directory
+        final Directory appDir = await getApplicationDocumentsDirectory();
+        final String fileName = 'pdf_${DateTime.now().millisecondsSinceEpoch}.pdf';
+        final String targetPath = '${appDir.path}/$fileName';
+        
+        await File(sourcePath).copy(targetPath);
+        
+        if (!mounted) return;
+        
+        setState(() {
+          _imagePaths.add(targetPath);
+          _imageTypes.add(AppConstants.imageTypePdf);
+        });
+        
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF document added successfully!'),
+            backgroundColor: AppTheme.successGreen,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick PDF: ${e.toString()}')),
       );
     }
   }
@@ -877,8 +1003,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
         return;
       }
       
-      // For House Rental, use current date as dummy dates since they're not relevant
-      final isRental = _selectedCategory == 'House Rental';
+      // For Rental categories, use current date as dummy dates since they're not relevant
+      final isRental = _isRentalCategory;
       
       if (!isRental && _expiryDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(

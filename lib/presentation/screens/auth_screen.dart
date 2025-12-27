@@ -62,7 +62,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
             const SizedBox(height: 32),
             Text(
-              'WarrantyVault',
+              'Kipt',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: colorScheme.onSurface,

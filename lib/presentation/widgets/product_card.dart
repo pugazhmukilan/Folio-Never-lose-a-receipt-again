@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../data/models/product_with_details.dart';
+import '../../data/database/database_helper.dart';
 import '../../core/utils/date_utils.dart' as utils;
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/image_actions.dart';
 
-class ProductCard extends StatelessWidget {
+class ProductCard extends StatefulWidget {
   final ProductWithDetails productWithDetails;
   final VoidCallback onTap;
   
@@ -15,15 +16,42 @@ class ProductCard extends StatelessWidget {
     required this.productWithDetails,
     required this.onTap,
   });
+
+  @override
+  State<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard> {
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  IconData _categoryIcon = Icons.category_outlined;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategoryIcon();
+  }
+
+  Future<void> _loadCategoryIcon() async {
+    try {
+      final category = await _dbHelper.getCategoryByName(widget.productWithDetails.product.category);
+      if (category != null && mounted) {
+        setState(() {
+          _categoryIcon = _getIconFromName(category.iconName);
+        });
+      }
+    } catch (e) {
+      // Use default icon on error
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
-    final product = productWithDetails.product;
+    final product = widget.productWithDetails.product;
     final expiryDate = utils.DateTimeUtils.parseISO(product.expiryDate);
-    final coverImagePath = productWithDetails.coverImagePath;
+    final coverImagePath = widget.productWithDetails.coverImagePath;
     
     // Calculate expiry status
     Color expiryColor = AppTheme.successGreen;
@@ -73,7 +101,7 @@ class ProductCard extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: onTap,
+            onTap: widget.onTap,
             splashColor: colorScheme.onSurface.withOpacity(0.08),
             highlightColor: colorScheme.onSurface.withOpacity(0.04),
             child: Column(
@@ -134,7 +162,7 @@ class ProductCard extends StatelessWidget {
                               child: IconButton(
                                 icon: const Icon(Icons.download, color: Colors.white, size: 16),
                                 onPressed: () {
-                                  final imagePaths = productWithDetails.attachments
+                                  final imagePaths = widget.productWithDetails.attachments
                                       .map((a) => a.imagePath)
                                       .toList();
                                   ImageActions.downloadImages(context, imagePaths, product.name);
@@ -153,7 +181,7 @@ class ProductCard extends StatelessWidget {
                               child: IconButton(
                                 icon: const Icon(Icons.share, color: Colors.white, size: 16),
                                 onPressed: () {
-                                  final imagePaths = productWithDetails.attachments
+                                  final imagePaths = widget.productWithDetails.attachments
                                       .map((a) => a.imagePath)
                                       .toList();
                                   ImageActions.shareImages(context, imagePaths, product.name);
@@ -234,7 +262,7 @@ class ProductCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            _getCategoryIcon(product.category),
+                            _categoryIcon,
                             size: 13,
                             color: colorScheme.primary,
                           ),
@@ -289,30 +317,41 @@ class ProductCard extends StatelessWidget {
     );
   }
   
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'Electronics':
-        return Icons.devices_outlined;
-      case 'Appliances':
-        return Icons.kitchen_outlined;
-      case 'Furniture':
-        return Icons.chair_outlined;
-      case 'Clothing':
-        return Icons.checkroom_outlined;
-      case 'Automotive':
-        return Icons.directions_car_outlined;
-      case 'Home & Garden':
-        return Icons.home_outlined;
-      case 'Sports & Fitness':
-        return Icons.fitness_center_outlined;
-      case 'Tools':
-        return Icons.build_outlined;
-      case 'Jewelry':
-        return Icons.diamond_outlined;
-      case 'House Rental':
-        return Icons.home_work_outlined;
-      default:
-        return Icons.category_outlined;
-    }
+  IconData _getIconFromName(String iconName) {
+    final iconMap = {
+      'category': Icons.category_outlined,
+      'devices': Icons.devices_outlined,
+      'kitchen': Icons.kitchen_outlined,
+      'weekend': Icons.chair_outlined,
+      'directions_car': Icons.directions_car_outlined,
+      'handyman': Icons.build_outlined,
+      'yard': Icons.home_outlined,
+      'checkroom': Icons.checkroom_outlined,
+      'sports_soccer': Icons.fitness_center_outlined,
+      'menu_book': Icons.menu_book_outlined,
+      'home': Icons.home_work_outlined,
+      'computer': Icons.computer_outlined,
+      'phone_android': Icons.phone_android_outlined,
+      'camera_alt': Icons.camera_alt_outlined,
+      'watch': Icons.watch_outlined,
+      'headphones': Icons.headphones_outlined,
+      'tv': Icons.tv_outlined,
+      'sports_esports': Icons.sports_esports_outlined,
+      'fitness_center': Icons.fitness_center_outlined,
+      'restaurant': Icons.restaurant_outlined,
+      'local_cafe': Icons.local_cafe_outlined,
+      'shopping_bag': Icons.shopping_bag_outlined,
+      'work': Icons.work_outlined,
+      'school': Icons.school_outlined,
+      'medical_services': Icons.medical_services_outlined,
+      'pets': Icons.pets_outlined,
+      'child_care': Icons.child_care_outlined,
+      'music_note': Icons.music_note_outlined,
+      'palette': Icons.palette_outlined,
+      'build': Icons.build_outlined,
+      'brush': Icons.brush_outlined,
+      'extension': Icons.extension_outlined,
+    };
+    return iconMap[iconName] ?? Icons.category_outlined;
   }
 }

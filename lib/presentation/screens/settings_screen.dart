@@ -11,6 +11,7 @@ import '../widgets/common_widgets.dart';
 import '../bloc/theme/theme_cubit.dart';
 import '../../data/repositories/auth_service.dart';
 import 'about_screen.dart';
+import 'categories_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -56,7 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Share the backup file
             Share.shareXFiles(
               [XFile(state.backupFilePath, mimeType: 'application/octet-stream')],
-              subject: 'WarrantyVault Backup',
+              subject: 'Kipt Backup',
             );
             
             ScaffoldMessenger.of(context).showSnackBar(
@@ -130,6 +131,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
+                      ListTile(
+                        leading: const Icon(Icons.category_outlined),
+                        title: const Text('Manage Categories'),
+                        subtitle: const Text('Add, edit, or delete categories'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const CategoriesScreen(),
+                            ),
+                          );
+                          // No need to do anything here, products_list_screen will auto-refresh
+                        },
+                      ),
+                      const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.contrast_outlined),
                         title: const Text('Theme'),
@@ -251,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.description_outlined),
-                        title: const Text('About Folio'),
+                        title: const Text('About Kipt'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
                           Navigator.of(context).push(

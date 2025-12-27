@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../../data/models/product_with_details.dart';
+import '../../data/models/category.dart';
+import '../../data/database/database_helper.dart';
 import '../bloc/product/product_bloc.dart';
 import '../bloc/product/product_event.dart';
 import '../bloc/product/product_state.dart';
@@ -30,6 +32,8 @@ class ProductsListScreen extends StatefulWidget {
 
 class _ProductsListScreenState extends State<ProductsListScreen>
     with SingleTickerProviderStateMixin {
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  List<Category> _categories = [];
   String _selectedCategory = 'All';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -49,8 +53,27 @@ class _ProductsListScreenState extends State<ProductsListScreen>
       curve: Curves.easeInOut,
     );
     _animationController.forward();
+    _loadCategories();
     // Load products on init
     context.read<ProductBloc>().add(LoadProducts());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload categories whenever this screen becomes visible
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _dbHelper.getAllCategories();
+      setState(() {
+        _categories = categories;
+      });
+    } catch (e) {
+      // Handle error silently or show a snackbar
+    }
   }
 
   @override
@@ -444,14 +467,8 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   }
 
   Widget _buildCategoryChips(ColorScheme colorScheme) {
-    // Example categories
-    final categories = [
-      'All',
-      'Electronics',
-      'Furniture',
-      'Clothing',
-      'Appliances'
-    ];
+    // Build category list: 'All' + all categories from database
+    final categories = ['All', ..._categories.map((c) => c.name)];
 
     return SizedBox(
       height: 50,

@@ -56,7 +56,7 @@ class AuthService {
       
       print('Calling authenticate...');
       final authenticated = await _localAuth.authenticate(
-        localizedReason: 'Authenticate to access WarrantyVault',
+        localizedReason: 'Authenticate to access Kipt',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: false, // Allow PIN/Pattern/Password as fallback

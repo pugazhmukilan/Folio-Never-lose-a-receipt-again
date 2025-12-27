@@ -2,10 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/note.dart';
 import '../../data/models/product_with_details.dart';
 import '../../data/models/rental_data.dart';
+import '../../data/models/category.dart';
+import '../../data/database/database_helper.dart';
 import '../bloc/product/product_bloc.dart';
 import '../bloc/product/product_event.dart';
 import '../bloc/product/product_state.dart';
@@ -27,6 +33,7 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final _imagePicker = ImagePicker();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
   
   @override
   void initState() {
@@ -48,21 +55,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             builder: (context, state) {
               if (state is ProductDetailsLoaded) {
                 final product = state.productWithDetails.product;
-                if (product.category == 'House Rental') {
-                  // Edit rental data
-                  return IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: 'Edit rental details',
-                    onPressed: () => _showEditRentalDialog(product),
-                  );
-                } else {
-                  // Edit warranty
-                  return IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: 'Edit warranty',
-                    onPressed: () => _showEditWarrantyDialog(product),
-                  );
-                }
+                return FutureBuilder<Category?>(
+                  future: _dbHelper.getCategoryByName(product.category),
+                  builder: (context, snapshot) {
+                    final isRental = snapshot.data?.isRentalType ?? false;
+                    if (isRental) {
+                      // Edit rental data
+                      return IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        tooltip: 'Edit rental details',
+                        onPressed: () => _showEditRentalDialog(product),
+                      );
+                    } else {
+                      // Edit warranty
+                      return IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        tooltip: 'Edit warranty',
+                        onPressed: () => _showEditWarrantyDialog(product),
+                      );
+                    }
+                  },
+                );
               }
               return const SizedBox.shrink();
             },
@@ -152,8 +165,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final imagePaths = attachments.map((a) => a.imagePath).toList();
     final imageTypes = attachments.map((a) => a.imageType).toList();
     
-    return SingleChildScrollView(
-      child: Column(
+    return FutureBuilder<Category?>(
+      future: _dbHelper.getCategoryByName(product.category),
+      builder: (context, snapshot) {
+        final isRentalCategory = snapshot.data?.isRentalType ?? false;
+        
+        return SingleChildScrollView(
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Image Carousel
@@ -194,8 +212,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 
                 const SizedBox(height: 16),
                 
-                // Purchase & Expiry Details Card - Hide for House Rental
-                if (product.category != 'House Rental')
+                // Purchase & Expiry Details Card - Hide for Rental categories
+                if (!isRentalCategory)
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
@@ -263,17 +281,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 //     ),
                 //   ),
                 // ],
-                                // House Rental Details Section
-                if (product.category == 'House Rental' && product.rentalData != null)
+                // Rental Details Section
+                if (isRentalCategory && product.rentalData != null)
                   _buildRentalDetailsSection(product.rentalData!),
-                                const SizedBox(height: 16),
+                const SizedBox(height: 16),
                 
-                // Images Section
+                // Images Section (excluding PDFs)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Images (${attachments.length})',
+                      'Images (${attachments.where((a) => a.imageType != AppConstants.imageTypePdf).length})',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -288,14 +306,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 
                 const SizedBox(height: 8),
                 
-                if (attachments.isNotEmpty)
+                if (attachments.where((a) => a.imageType != AppConstants.imageTypePdf).isNotEmpty)
                   SizedBox(
                     height: 100,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: attachments.length,
+                      itemCount: attachments.where((a) => a.imageType != AppConstants.imageTypePdf).length,
                       itemBuilder: (context, index) {
-                        final attachment = attachments[index];
+                        final imageAttachments = attachments.where((a) => a.imageType != AppConstants.imageTypePdf).toList();
+                        final attachment = imageAttachments[index];
                         
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
@@ -309,6 +328,123 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   height: 100,
                                   fit: BoxFit.cover,
                                   cacheWidth: AppConstants.imageCacheWidthThumbnail,
+                                ),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: Theme.of(context).colorScheme.error,
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    iconSize: 16,
+                                    icon: Icon(
+                                      Icons.close,
+                                      color: Theme.of(context).colorScheme.onError,
+                                    ),
+                                    onPressed: () {
+                                      _confirmDeleteAttachment(
+                                        context,
+                                        attachment.id!,
+                                        attachment.imagePath,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                
+                const SizedBox(height: 24),
+                
+                // PDF Documents Section (separate)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'PDF Documents (${attachments.where((a) => a.imageType == AppConstants.imageTypePdf).length})',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _addImage,
+                      icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                      label: const Text('Add PDF'),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 8),
+                
+                if (attachments.where((a) => a.imageType == AppConstants.imageTypePdf).isNotEmpty)
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: attachments.where((a) => a.imageType == AppConstants.imageTypePdf).length,
+                      itemBuilder: (context, index) {
+                        final pdfAttachments = attachments.where((a) => a.imageType == AppConstants.imageTypePdf).toList();
+                        final attachment = pdfAttachments[index];
+                        
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _openPdf(attachment.imagePath),
+                                child: Container(
+                                  width: 100,
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    border: Border.all(color: Colors.red.shade200, width: 2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.picture_as_pdf, size: 48, color: Colors.red),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'PDF',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
+                                        'Tap to open',
+                                        style: TextStyle(fontSize: 9, color: Colors.grey),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 4,
+                                left: 4,
+                                right: 4,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => _sharePdf(attachment.imagePath),
+                                      child: CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: Colors.red,
+                                        child: const Icon(Icons.share, size: 16, color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               Positioned(
@@ -404,6 +540,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ],
       ),
+        );
+      },
     );
   }
 
@@ -644,36 +782,78 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _addImage() async {
     try {
       // Show dialog to select image source
-      final imageSource = await _showImageSourceDialog(context);
+      final choice = await _showAttachmentSourceDialog(context);
       
-      if (imageSource == null) return;
+      if (choice == null) return;
       
-      final XFile? image = await _imagePicker.pickImage(
-        source: imageSource,
-        imageQuality: AppConstants.imageQuality,
-      );
-      
-      if (image != null) {
-        // Show dialog to select image type
-        final imageType = await _showImageTypeDialog(context);
+      if (choice == 'pdf') {
+        await _addPdfDocument();
+      } else {
+        final imageSource = choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+        final XFile? image = await _imagePicker.pickImage(
+          source: imageSource,
+          imageQuality: AppConstants.imageQuality,
+        );
         
-        if (imageType != null) {
-          context.read<ProductBloc>().add(AddAttachment(
-                productId: widget.productId,
-                imagePath: image.path,
-                imageType: imageType,
-              ));
+        if (image != null) {
+          // Show dialog to select image type
+          final imageType = await _showImageTypeDialog(context);
+          
+          if (imageType != null) {
+            context.read<ProductBloc>().add(AddAttachment(
+                  productId: widget.productId,
+                  imagePath: image.path,
+                  imageType: imageType,
+                ));
+          }
         }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add image: ${e.toString()}')),
+        SnackBar(content: Text('Failed to add attachment: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _addPdfDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final String sourcePath = result.files.single.path!;
+        
+        // Copy PDF to app directory
+        final Directory appDir = await getApplicationDocumentsDirectory();
+        final String fileName = 'pdf_${DateTime.now().millisecondsSinceEpoch}.pdf';
+        final String targetPath = '${appDir.path}/$fileName';
+        
+        await File(sourcePath).copy(targetPath);
+        
+        if (!mounted) return;
+        
+        context.read<ProductBloc>().add(AddAttachment(
+              productId: widget.productId,
+              imagePath: targetPath,
+              imageType: AppConstants.imageTypePdf,
+            ));
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF document added successfully!')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add PDF: ${e.toString()}')),
       );
     }
   }
   
-  Future<ImageSource?> _showImageSourceDialog(BuildContext context) async {
-    return showModalBottomSheet<ImageSource>(
+  Future<String?> _showAttachmentSourceDialog(BuildContext context) async {
+    return showModalBottomSheet<String>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -697,7 +877,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               
               // Title
               const Text(
-                'Select Image Source',
+                'Select Attachment Source',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -713,7 +893,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 title: const Text('Camera'),
                 subtitle: const Text('Take a photo'),
-                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+                onTap: () => Navigator.of(context).pop('camera'),
               ),
               ListTile(
                 leading: const Icon(
@@ -722,7 +902,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 title: const Text('Gallery'),
                 subtitle: const Text('Choose from gallery'),
-                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+                onTap: () => Navigator.of(context).pop('gallery'),
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.picture_as_pdf,
+                  size: 28,
+                  color: Colors.red,
+                ),
+                title: const Text('PDF Document'),
+                subtitle: const Text('Pick a PDF file'),
+                onTap: () => Navigator.of(context).pop('pdf'),
               ),
               const SizedBox(height: 16),
             ],
@@ -761,6 +951,75 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         );
       },
     );
+  }
+
+  Future<void> _openPdf(String pdfPath) async {
+    try {
+      // Check if file exists
+      final file = File(pdfPath);
+      if (!await file.exists()) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF file not found')),
+        );
+        return;
+      }
+
+      // Open the PDF file
+      final result = await OpenFile.open(pdfPath);
+      
+      if (result.type != ResultType.done) {
+        if (!mounted) return;
+        String message = 'Could not open PDF';
+        if (result.message.isNotEmpty) {
+          message = result.message;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            action: SnackBarAction(
+              label: 'Share',
+              onPressed: () => _sharePdf(pdfPath),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening PDF: $e'),
+          action: SnackBarAction(
+            label: 'Share',
+            onPressed: () => _sharePdf(pdfPath),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _sharePdf(String pdfPath) async {
+    try {
+      // Check if file exists
+      final file = File(pdfPath);
+      if (!await file.exists()) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF file not found')),
+        );
+        return;
+      }
+
+      await Share.shareXFiles(
+        [XFile(pdfPath)],
+        text: 'Sharing document from Kipt',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sharing PDF: $e')),
+      );
+    }
   }
   
   void _confirmDeleteAttachment(

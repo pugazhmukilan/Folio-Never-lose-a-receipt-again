@@ -30,11 +30,11 @@ void main() async {
     // Silent fail - notifications can be initialized later if needed
   });
   
-  runApp(const WarrantyVaultApp());
+  runApp(const KiptApp());
 }
 
-class WarrantyVaultApp extends StatelessWidget {
-  const WarrantyVaultApp({super.key});
+class KiptApp extends StatelessWidget {
+  const KiptApp({super.key});
 
   @override
   Widget build(BuildContext context) {

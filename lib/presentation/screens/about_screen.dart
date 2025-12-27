@@ -10,7 +10,7 @@ class AboutScreen extends StatelessWidget {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('About Folio'),
+        title: const Text('About Kipt'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -26,7 +26,7 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Folio',
+                  'Kipt',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
@@ -126,7 +126,7 @@ class AboutScreen extends StatelessWidget {
             children: [
               _buildStepItem(context, '1', 'Add a Product', 'Tap the + button on the home screen. Enter product details or scan a receipt to auto-fill information.'),
               _buildStepItem(context, '2', 'Attach Documents', 'Add photos of your receipt, warranty card, and product. Multiple images supported.'),
-              _buildStepItem(context, '3', 'Set Category & Expiry', 'Choose a category and set the warranty expiry date. Folio will automatically calculate and track it.'),
+              _buildStepItem(context, '3', 'Set Category & Expiry', 'Choose a category and set the warranty expiry date. Kipt will automatically calculate and track it.'),
               _buildStepItem(context, '4', 'Get Reminders', 'Enable notifications in Settings to receive alerts before warranties expire.'),
               _buildStepItem(context, '5', 'Search & Filter', 'Use the search bar or category filters on the home screen to quickly find any product.'),
               _buildStepItem(context, '6', 'View Details', 'Tap any product card to view complete details, edit information, or add notes.'),
@@ -198,7 +198,7 @@ class AboutScreen extends StatelessWidget {
             context,
             icon: Icons.privacy_tip_outlined,
             title: 'Privacy & Security',
-            content: 'Your privacy is our priority. Folio is completely offline - your data never leaves your device. All information is stored locally on your phone. Backups are encrypted ZIP files that you control. No tracking, no analytics, no cloud storage. Your data is yours alone.',
+            content: 'Your privacy is our priority. Kipt is completely offline - your data never leaves your device. All information is stored locally on your phone. Backups are encrypted ZIP files that you control. No tracking, no analytics, no cloud storage. Your data is yours alone.',
           ),
           
           const SizedBox(height: 32),
@@ -206,7 +206,7 @@ class AboutScreen extends StatelessWidget {
           // Footer
           Center(
             child: Text(
-              '© 2025 Folio\nYour Warranty Management Solution',
+              '© 2025 Kipt\nYour Warranty Management Solution',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,

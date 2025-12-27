@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
 import 'full_screen_image_viewer.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/image_actions.dart';
@@ -62,13 +63,19 @@ class _ImageCarouselState extends State<ImageCarousel> {
             },
             itemCount: widget.imagePaths.length,
             itemBuilder: (context, index) {
+              final isPdf = widget.imageTypes[index] == AppConstants.imageTypePdf;
+              
               return Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Stack(
                   children: [
                     GestureDetector(
                       onTap: () {
-                        _showFullScreenImage(context, index);
+                        if (isPdf) {
+                          _openPdf(widget.imagePaths[index]);
+                        } else {
+                          _showFullScreenImage(context, index);
+                        }
                       },
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(10),
@@ -82,63 +89,84 @@ class _ImageCarouselState extends State<ImageCarousel> {
                               width: 1,
                             ),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.file(
-                              File(widget.imagePaths[index]),
-                              fit: BoxFit.contain,
-                              cacheWidth: AppConstants.imageCacheWidthDetail,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[300],
-                                  child: const Icon(
-                                    Icons.broken_image_outlined,
-                                    size: 80,
-                                    color: Colors.grey,
+                          child: isPdf
+                              ? Container(
+                                  color: Colors.red.shade50,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.picture_as_pdf, size: 80, color: Colors.red),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        'PDF Document',
+                                        style: TextStyle(fontSize: 16, color: Colors.red, fontWeight: FontWeight.bold),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Tap to open',
+                                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                                      ),
+                                    ],
                                   ),
-                                );
-                              },
-                            ),
-                          ),
+                                )
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.file(
+                                    File(widget.imagePaths[index]),
+                                    fit: BoxFit.contain,
+                                    cacheWidth: AppConstants.imageCacheWidthDetail,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey[300],
+                                        child: const Icon(
+                                          Icons.broken_image_outlined,
+                                          size: 80,
+                                          color: Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
                         ),
                       ),
                     ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              shape: BoxShape.circle,
+                    if (!isPdf)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.download, color: Colors.white, size: 20),
+                                onPressed: () => ImageActions.downloadImage(context, widget.imagePaths[index]),
+                                tooltip: 'Download',
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.all(8),
+                              ),
                             ),
-                            child: IconButton(
-                              icon: const Icon(Icons.download, color: Colors.white, size: 20),
-                              onPressed: () => ImageActions.downloadImage(context, widget.imagePaths[index]),
-                              tooltip: 'Download',
-                              constraints: const BoxConstraints(),
-                              padding: const EdgeInsets.all(8),
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                                onPressed: () => ImageActions.shareImage(context, widget.imagePaths[index], widget.imageTypes[index]),
+                                tooltip: 'Share',
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.all(8),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.share, color: Colors.white, size: 20),
-                              onPressed: () => ImageActions.shareImage(context, widget.imagePaths[index], widget.imageTypes[index]),
-                              tooltip: 'Share',
-                              constraints: const BoxConstraints(),
-                              padding: const EdgeInsets.all(8),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
                   ],
                 ),
               );
@@ -167,6 +195,26 @@ class _ImageCarouselState extends State<ImageCarousel> {
           ),
       ],
     );
+  }
+  
+  Future<void> _openPdf(String pdfPath) async {
+    try {
+      final result = await OpenFile.open(pdfPath);
+      
+      if (result.type != ResultType.done) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to open PDF: ${result.message}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening PDF: ${e.toString()}')),
+        );
+      }
+    }
   }
   
   void _showFullScreenImage(BuildContext context, int index) {

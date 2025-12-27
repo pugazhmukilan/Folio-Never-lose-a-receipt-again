@@ -4,6 +4,7 @@ import '../../core/constants/app_constants.dart';
 import '../models/product.dart';
 import '../models/attachment.dart';
 import '../models/note.dart';
+import '../models/category.dart';
 
 class DatabaseHelper {
   static DatabaseHelper? _instance;
@@ -122,6 +123,41 @@ class DatabaseHelper {
     ''');
     
     // OCR index removed
+    
+    // Create categories table
+    await db.execute('''
+      CREATE TABLE ${AppConstants.tableCategories} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        icon_name TEXT NOT NULL,
+        is_system INTEGER DEFAULT 0,
+        is_rental_type INTEGER DEFAULT 0
+      )
+    ''');
+    
+    // Seed default categories
+    await _seedDefaultCategories(db);
+  }
+  
+  /// Seed default categories
+  Future<void> _seedDefaultCategories(Database db) async {
+    final defaultCategories = [
+      {'name': 'Electronics', 'icon_name': 'devices', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'Appliances', 'icon_name': 'kitchen', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'Furniture', 'icon_name': 'weekend', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'Automotive', 'icon_name': 'directions_car', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'Tools', 'icon_name': 'handyman', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'Home & Garden', 'icon_name': 'yard', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'Fashion', 'icon_name': 'checkroom', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'Sports & Outdoors', 'icon_name': 'sports_soccer', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'Books & Media', 'icon_name': 'menu_book', 'is_system': 1, 'is_rental_type': 0},
+      {'name': 'House Rental', 'icon_name': 'home', 'is_system': 1, 'is_rental_type': 1},
+      {'name': 'Other', 'icon_name': 'category', 'is_system': 1, 'is_rental_type': 0},
+    ];
+    
+    for (final category in defaultCategories) {
+      await db.insert(AppConstants.tableCategories, category);
+    }
   }
   
   /// Handle database upgrades
@@ -143,6 +179,21 @@ class DatabaseHelper {
         ALTER TABLE ${AppConstants.tableProducts}
         ADD COLUMN rental_data TEXT
       ''');
+    }
+    
+    // Upgrade from version 4 to 5: Add categories table
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE ${AppConstants.tableCategories} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          icon_name TEXT NOT NULL,
+          is_system INTEGER DEFAULT 0,
+          is_rental_type INTEGER DEFAULT 0
+        )
+      ''');
+      
+      await _seedDefaultCategories(db);
     }
   }
   
@@ -435,5 +486,134 @@ class DatabaseHelper {
     await db.delete(AppConstants.tableNotes);
     await db.delete(AppConstants.tableAttachments);
     await db.delete(AppConstants.tableProducts);
+  }
+  
+  // ==================== CATEGORY OPERATIONS ====================
+  
+  /// Insert a new category
+  Future<int> insertCategory(Category category) async {
+    final db = await database;
+    
+    // Check for duplicate names (case-insensitive)
+    final existing = await getCategoryByName(category.name);
+    if (existing != null) {
+      throw Exception('A category with this name already exists');
+    }
+    
+    return await db.insert(
+      AppConstants.tableCategories,
+      category.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.abort,
+    );
+  }
+  
+  /// Get all categories
+  Future<List<Category>> getAllCategories() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      AppConstants.tableCategories,
+      orderBy: 'is_system DESC, name ASC', // System categories first, then alphabetical
+    );
+    
+    return List.generate(maps.length, (i) {
+      return Category.fromMap(maps[i]);
+    });
+  }
+  
+  /// Get category by ID
+  Future<Category?> getCategoryById(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      AppConstants.tableCategories,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    
+    if (maps.isEmpty) return null;
+    return Category.fromMap(maps.first);
+  }
+  
+  /// Get category by name (case-insensitive)
+  Future<Category?> getCategoryByName(String name) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      AppConstants.tableCategories,
+      where: 'LOWER(name) = LOWER(?)',
+      whereArgs: [name],
+    );
+    
+    if (maps.isEmpty) return null;
+    return Category.fromMap(maps.first);
+  }
+  
+  /// Update category
+  Future<int> updateCategory(Category category) async {
+    final db = await database;
+    
+    // Check if it's a system category
+    final existing = await getCategoryById(category.id!);
+    if (existing?.isSystem == true) {
+      throw Exception('System categories cannot be modified');
+    }
+    
+    // Check for duplicate names (excluding current category)
+    final duplicate = await getCategoryByName(category.name);
+    if (duplicate != null && duplicate.id != category.id) {
+      throw Exception('A category with this name already exists');
+    }
+    
+    return await db.update(
+      AppConstants.tableCategories,
+      category.toMap(),
+      where: 'id = ?',
+      whereArgs: [category.id],
+    );
+  }
+  
+  /// Delete category
+  Future<int> deleteCategory(int id) async {
+    final db = await database;
+    
+    // Check if it's a system category
+    final category = await getCategoryById(id);
+    if (category?.isSystem == true) {
+      throw Exception('System categories cannot be deleted');
+    }
+    
+    // Check if category is in use by any products
+    final productsUsingCategory = await db.query(
+      AppConstants.tableProducts,
+      where: 'category = ?',
+      whereArgs: [category?.name],
+      limit: 1,
+    );
+    
+    if (productsUsingCategory.isNotEmpty) {
+      throw Exception('Cannot delete category that is in use by products');
+    }
+    
+    return await db.delete(
+      AppConstants.tableCategories,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+  
+  /// Check if category name is available (for validation)
+  Future<bool> isCategoryNameAvailable(String name, {int? excludeId}) async {
+    final category = await getCategoryByName(name);
+    if (category == null) return true;
+    if (excludeId != null && category.id == excludeId) return true;
+    return false;
+  }
+  
+  /// Get count of products using a category
+  Future<int> getProductCountByCategory(String categoryName) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM ${AppConstants.tableProducts} WHERE category = ?',
+      [categoryName],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 }

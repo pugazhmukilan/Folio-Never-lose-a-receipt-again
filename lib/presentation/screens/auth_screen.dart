@@ -55,10 +55,19 @@ class _AuthScreenState extends State<AuthScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.lock_outline,
-              size: 80,
-              color: colorScheme.primary,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset(
+                'assets/logo.png',
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.lock_outline,
+                  size: 80,
+                  color: colorScheme.primary,
+                ),
+              ),
             ),
             const SizedBox(height: 32),
             Text(
@@ -72,7 +81,7 @@ class _AuthScreenState extends State<AuthScreen> {
             Text(
               'Authenticate to continue',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.6),
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
             ),
             const SizedBox(height: 48),

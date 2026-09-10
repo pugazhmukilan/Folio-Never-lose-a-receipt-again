@@ -4,25 +4,24 @@ import 'package:archive/archive_io.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../../core/constants/app_constants.dart';
-import '../models/product.dart';
-import '../models/attachment.dart';
-import '../models/note.dart';
-import 'product_repository.dart';
+import '../models/category.dart';
+import '../models/item.dart';
+import '../models/item_field.dart';
+import 'item_repository.dart';
 import 'image_storage_service.dart';
 
 class BackupService {
-  final ProductRepository productRepository;
+  final ItemRepository itemRepository;
   final ImageStorageService imageStorageService;
   
   BackupService({
-    required this.productRepository,
+    required this.itemRepository,
     required this.imageStorageService,
   });
   
   /// Export all data to a ZIP file
   Future<String> exportData() async {
     try {
-      // Get temporary directory for creating backup
       final tempDir = await getTemporaryDirectory();
       final backupDir = Directory(path.join(tempDir.path, 'backup_temp'));
       
@@ -31,52 +30,61 @@ class BackupService {
       }
       await backupDir.create(recursive: true);
       
-      // Get all data from database
-      final products = await productRepository.getAllProducts();
-      final attachments = await productRepository.getAllAttachments();
-      final notes = await productRepository.getAllNotes();
+      final itemsWithDetails = await itemRepository.getAllItemsWithDetails();
+      final categories = await itemRepository.getAllCategories();
       
-      // Create JSON data
+      // We do not export PASSWORD fields per spec §6
+      final List<Map<String, dynamic>> itemsList = [];
+      for (final iwd in itemsWithDetails) {
+        final itemMap = iwd.item.toMap();
+        
+        final List<Map<String, dynamic>> fields = [];
+        for (final f in iwd.fields) {
+          if (f.fieldType == FieldType.password) continue;
+          fields.add(f.toMap());
+        }
+        itemMap['fields'] = fields;
+        itemMap['attachments'] = iwd.attachments.map((a) => a.toMap()).toList();
+        
+        itemsList.add(itemMap);
+      }
+
       final Map<String, dynamic> backupData = {
         'version': AppConstants.appVersion,
+        'schema_version': 7,
         'exported_at': DateTime.now().toIso8601String(),
-        'products': products.map((p) => p.toJson()).toList(),
-        'attachments': attachments.map((a) => a.toJson()).toList(),
-        'notes': notes.map((n) => n.toJson()).toList(),
+        'categories': categories.map((c) => c.toMap()).toList(),
+        'items': itemsList,
       };
       
-      // Write JSON to file
       final jsonFile = File(path.join(backupDir.path, AppConstants.backupDataFileName));
       await jsonFile.writeAsString(jsonEncode(backupData));
       
-      // Create images directory in backup
       final imagesBackupDir = Directory(
         path.join(backupDir.path, AppConstants.backupImagesFolder),
       );
       await imagesBackupDir.create(recursive: true);
       
-      // Copy all images to backup directory
-      for (final attachment in attachments) {
-        final imageFile = File(attachment.imagePath);
-        if (await imageFile.exists()) {
-          final fileName = path.basename(attachment.imagePath);
-          final destPath = path.join(imagesBackupDir.path, fileName);
-          await imageFile.copy(destPath);
+      for (final iwd in itemsWithDetails) {
+        for (final attachment in iwd.attachments) {
+          final file = File(attachment.path);
+          if (await file.exists()) {
+            final fileName = path.basename(attachment.path);
+            final destPath = path.join(imagesBackupDir.path, fileName);
+            await file.copy(destPath);
+          }
         }
       }
       
-      // Create ZIP archive
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final zipFileName = '${AppConstants.backupFileName}_$timestamp.zip';
       final zipFilePath = path.join(tempDir.path, zipFileName);
       
-      // Zip the backup directory
       final encoder = ZipFileEncoder();
       encoder.create(zipFilePath);
       await encoder.addDirectory(backupDir, includeDirName: false);
       encoder.close();
       
-      // Clean up temp backup directory
       await backupDir.delete(recursive: true);
       
       return zipFilePath;
@@ -88,7 +96,6 @@ class BackupService {
   /// Import data from a ZIP file
   Future<void> importData(String zipFilePath) async {
     try {
-      // Get temporary directory for extracting backup
       final tempDir = await getTemporaryDirectory();
       final extractDir = Directory(path.join(tempDir.path, 'backup_extract'));
       
@@ -97,8 +104,6 @@ class BackupService {
       }
       await extractDir.create(recursive: true);
       
-      // Extract ZIP file
-      // Extract ZIP file
       final bytes = File(zipFilePath).readAsBytesSync();
       final archive = ZipDecoder().decodeBytes(bytes);
       
@@ -116,17 +121,14 @@ class BackupService {
         }
       }
       
-      // Find data.json (handle both flat zip and nested folder zip)
       File? jsonFile;
       Directory? rootBackupDir;
       
-      // Check root first
       final rootDataFile = File(path.join(extractDir.path, AppConstants.backupDataFileName));
       if (await rootDataFile.exists()) {
         jsonFile = rootDataFile;
         rootBackupDir = extractDir;
       } else {
-        // Check subdirectories
         final entities = await extractDir.list().toList();
         for (final entity in entities) {
           if (entity is Directory) {
@@ -147,82 +149,60 @@ class BackupService {
       final jsonContent = await jsonFile.readAsString();
       final Map<String, dynamic> backupData = jsonDecode(jsonContent);
       
-      // Import products
-      final List<dynamic> productsJson = backupData['products'] ?? [];
-      final Map<int, int> productIdMap = {}; // Old ID -> New ID
-      
-      for (final productJson in productsJson) {
-        final product = Product.fromJson(productJson);
-        final oldId = product.id;
-        
-        // Insert without ID to get new auto-generated ID
-        final newId = await productRepository.createProduct(
-          product.copyWith(id: null),
-        );
-        
-        if (oldId != null) {
-          productIdMap[oldId] = newId;
-        }
+      if (backupData['schema_version'] != 7) {
+        // Simple wipe-and-fail for old backups since schema is fully changed
+        throw Exception('Incompatible backup version. Only v7 schema backups are supported.');
       }
-      
-      // Import images and attachments
-      final List<dynamic> attachmentsJson = backupData['attachments'] ?? [];
-      final imagesDir = await imageStorageService.getImagesDirectory();
+
+      await itemRepository.clearAllData();
+
+      // 1. Categories
+      final List<dynamic> categoriesJson = backupData['categories'] ?? [];
+      final Map<int, int> categoryIdMap = {}; // old -> new
+      for (final catMap in categoriesJson) {
+        final cat = Category.fromMap(catMap as Map<String, dynamic>);
+        final oldId = cat.id;
+        final newId = await itemRepository.createCategory(cat.copyWith(id: null));
+        if (oldId != null) categoryIdMap[oldId] = newId;
+      }
+
+      // 2. Items
+      final List<dynamic> itemsJson = backupData['items'] ?? [];
       final imagesBackupDir = Directory(
         path.join(rootBackupDir.path, AppConstants.backupImagesFolder),
       );
-      
-      if (await imagesBackupDir.exists()) {
-        for (final attachmentJson in attachmentsJson) {
-          final attachment = Attachment.fromJson(attachmentJson);
-          final oldProductId = attachment.productId;
-          final newProductId = productIdMap[oldProductId];
+
+      for (final itemMap in itemsJson) {
+        final map = itemMap as Map<String, dynamic>;
+        
+        final item = Item.fromMap(map);
+        final oldCatId = item.categoryId;
+        final newCatId = oldCatId != null ? categoryIdMap[oldCatId] : null;
+        
+        final fields = (map['fields'] as List<dynamic>? ?? [])
+            .map((e) => ItemField.fromMap(e as Map<String, dynamic>).copyWith(id: null))
+            .toList();
+
+        // Process attachments
+        final List<String> newAttachmentPaths = [];
+        final oldAttachments = (map['attachments'] as List<dynamic>? ?? []);
+        for (final attMap in oldAttachments) {
+          final oldPath = attMap['path'] as String;
+          final fileName = path.basename(oldPath);
+          final sourceFile = File(path.join(imagesBackupDir.path, fileName));
           
-          if (newProductId != null) {
-            final oldImagePath = attachment.imagePath;
-            final fileName = path.basename(oldImagePath);
-            final sourceImagePath = path.join(imagesBackupDir.path, fileName);
-            
-            if (await File(sourceImagePath).exists()) {
-              // Copy image to app directory
-              final timestamp = DateTime.now().millisecondsSinceEpoch;
-              final newFileName = 'img_${timestamp}_$fileName';
-              final newImagePath = path.join(imagesDir.path, newFileName);
-              
-              await File(sourceImagePath).copy(newImagePath);
-              
-              // Insert attachment with new product ID and image path
-              await productRepository.addAttachment(
-                Attachment(
-                  productId: newProductId,
-                  imagePath: newImagePath,
-                  imageType: attachment.imageType,
-                ),
-              );
-            }
+          if (await sourceFile.exists()) {
+            newAttachmentPaths.add(sourceFile.path);
           }
         }
+
+        await itemRepository.createItem(
+          item: item.copyWith(id: null, categoryId: newCatId),
+          fields: fields,
+          attachmentPaths: newAttachmentPaths,
+        );
       }
       
-      // Import notes
-      final List<dynamic> notesJson = backupData['notes'] ?? [];
-      
-      for (final noteJson in notesJson) {
-        final note = Note.fromJson(noteJson);
-        final oldProductId = note.productId;
-        final newProductId = productIdMap[oldProductId];
-        
-        if (newProductId != null) {
-          await productRepository.addNote(
-            note.copyWith(
-              id: null,
-              productId: newProductId,
-            ),
-          );
-        }
-      }
-      
-      // Clean up extraction directory
       await extractDir.delete(recursive: true);
     } catch (e) {
       throw Exception('Failed to import data: ${e.toString()}');

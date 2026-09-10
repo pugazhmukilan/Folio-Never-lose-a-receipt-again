@@ -37,24 +37,14 @@ class AuthService {
   /// Authenticate user with biometric or device credentials
   Future<bool> authenticate() async {
     try {
-      print('Starting authentication...');
-      
       // Check if device has any authentication method available
       final canCheckBiometrics = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
-      
-      print('canCheckBiometrics: $canCheckBiometrics, isDeviceSupported: $isDeviceSupported');
-      
+
       if (!canCheckBiometrics && !isDeviceSupported) {
-        print('No authentication methods available');
         return false; // Return false to show proper error message
       }
-      
-      // Get available biometrics for debugging
-      final availableBiometrics = await _localAuth.getAvailableBiometrics();
-      print('Available biometrics: $availableBiometrics');
-      
-      print('Calling authenticate...');
+
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'Authenticate to access Kipt',
         options: const AuthenticationOptions(
@@ -64,30 +54,21 @@ class AuthService {
           sensitiveTransaction: false,
         ),
       );
-      
-      print('Authentication result: $authenticated');
+
       return authenticated;
     } on PlatformException catch (e) {
-      print('PlatformException: code=${e.code}, message=${e.message}');
-      
       // Handle specific error codes
       if (e.code == 'NotAvailable') {
-        print('Authentication not available');
         return false;
       } else if (e.code == 'PasscodeNotSet' || e.code == 'NotEnrolled') {
-        print('Device security not set up');
         return false;
       } else if (e.code == 'LockedOut' || e.code == 'PermanentlyLockedOut') {
-        print('Authentication locked');
         return false;
       } else if (e.code == 'UserCanceled' || e.code == 'SystemCanceled') {
-        print('Authentication canceled by user');
         return false;
       }
-      print('Other authentication error: ${e.code} - ${e.message}');
       return false;
     } catch (e) {
-      print('Unexpected authentication error: $e');
       return false;
     }
   }

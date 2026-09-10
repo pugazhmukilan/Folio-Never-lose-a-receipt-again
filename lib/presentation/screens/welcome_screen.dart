@@ -15,9 +15,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
-      icon: Icons.inventory_2_outlined,
-      title: 'Manage Warranties',
-      description: 'Keep track of all your product warranties and important documents in one organized place.',
+      imagePath: 'assets/logo.png',
+      title: 'Keep Every Item',
+      description: 'One card for every important thing you own — warranty, receipt, ID, or note.',
     ),
     OnboardingPage(
       icon: Icons.camera_alt_outlined,
@@ -27,12 +27,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     OnboardingPage(
       icon: Icons.notifications_outlined,
       title: 'Expiry Reminders',
-      description: 'Receive timely notifications before your warranties expire. Never miss a claim deadline.',
+      description: 'Receive timely notifications before your items expire. Never miss a deadline again.',
     ),
     OnboardingPage(
       icon: Icons.security_outlined,
-      title: 'Secure Backup',
-      description: 'Your data is safely backed up and can be restored anytime. Complete peace of mind.',
+      title: 'Private & Secure',
+      description: 'Your data stays on your device — locked, offline, and safe.',
     ),
   ];
 
@@ -167,19 +167,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon
+          // Icon or logo
           Container(
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.3),
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Icon(
-              page.icon,
-              size: 40,
-              color: colorScheme.primary,
-            ),
+            clipBehavior: Clip.antiAlias,
+            child: page.imagePath != null
+                ? Image.asset(
+                    page.imagePath!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      page.icon,
+                      size: 40,
+                      color: colorScheme.primary,
+                    ),
+                  )
+                : Icon(
+                    page.icon,
+                    size: 40,
+                    color: colorScheme.primary,
+                  ),
           ),
           const SizedBox(height: 40),
           
@@ -222,7 +233,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       decoration: BoxDecoration(
         color: isActive 
             ? colorScheme.primary 
-            : colorScheme.onSurface.withOpacity(0.2),
+            : colorScheme.onSurface.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -231,12 +242,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
 class OnboardingPage {
   final IconData icon;
+  final String? imagePath;
   final String title;
   final String description;
 
   OnboardingPage({
-    required this.icon,
+    IconData? icon,
+    this.imagePath,
     required this.title,
     required this.description,
-  });
+  }) : icon = icon ?? Icons.inventory_2_outlined;
 }

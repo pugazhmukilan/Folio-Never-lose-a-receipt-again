@@ -2,77 +2,74 @@ import 'package:equatable/equatable.dart';
 
 class Attachment extends Equatable {
   final int? id;
-  final int productId;
-  final String imagePath;
-  final String imageType;
-  
+  final int itemId;
+  final String path;
+  final bool isPhoto;
+  final String mimetype;
+  final DateTime addedAt;
+
   const Attachment({
     this.id,
-    required this.productId,
-    required this.imagePath,
-    required this.imageType,
+    required this.itemId,
+    required this.path,
+    required this.isPhoto,
+    required this.mimetype,
+    required this.addedAt,
   });
-  
-  /// Convert Attachment to Map for database insertion
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'product_id': productId,
-      'image_path': imagePath,
-      'image_type': imageType,
+      'item_id': itemId,
+      'path': path,
+      'is_photo': isPhoto ? 1 : 0,
+      'mimetype': mimetype,
+      'added_at': addedAt.toIso8601String(),
     };
   }
-  
-  /// Create Attachment from Map (database query result)
+
   factory Attachment.fromMap(Map<String, dynamic> map) {
     return Attachment(
       id: map['id'] as int?,
-      productId: map['product_id'] as int,
-      imagePath: map['image_path'] as String,
-      imageType: map['image_type'] as String,
+      itemId: map['item_id'] as int,
+      path: map['path'] as String,
+      isPhoto: (map['is_photo'] as int? ?? 1) == 1,
+      mimetype: map['mimetype'] as String? ?? 'image/jpeg',
+      addedAt: _parseDateTime(map['added_at']),
     );
   }
-  
-  /// Create a copy of Attachment with some fields updated
+
+  /// Lenient date parsing so a corrupt timestamp cannot crash item loads.
+  static DateTime _parseDateTime(Object? raw) {
+    if (raw is String && raw.isNotEmpty) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return parsed;
+    }
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
   Attachment copyWith({
     int? id,
-    int? productId,
-    String? imagePath,
-    String? imageType,
+    int? itemId,
+    String? path,
+    bool? isPhoto,
+    String? mimetype,
+    DateTime? addedAt,
   }) {
     return Attachment(
       id: id ?? this.id,
-      productId: productId ?? this.productId,
-      imagePath: imagePath ?? this.imagePath,
-      imageType: imageType ?? this.imageType,
+      itemId: itemId ?? this.itemId,
+      path: path ?? this.path,
+      isPhoto: isPhoto ?? this.isPhoto,
+      mimetype: mimetype ?? this.mimetype,
+      addedAt: addedAt ?? this.addedAt,
     );
   }
-  
-  /// Convert to JSON for backup
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'product_id': productId,
-      'image_path': imagePath,
-      'image_type': imageType,
-    };
-  }
-  
-  /// Create from JSON for restore
-  factory Attachment.fromJson(Map<String, dynamic> json) {
-    return Attachment(
-      id: json['id'] as int?,
-      productId: json['product_id'] as int,
-      imagePath: json['image_path'] as String,
-      imageType: json['image_type'] as String,
-    );
-  }
-  
+
+  Map<String, dynamic> toJson() => toMap();
+  factory Attachment.fromJson(Map<String, dynamic> json) =>
+      Attachment.fromMap(json);
+
   @override
-  List<Object?> get props => [id, productId, imagePath, imageType];
-  
-  @override
-  String toString() {
-    return 'Attachment{id: $id, productId: $productId, imageType: $imageType, imagePath: $imagePath}';
-  }
+  List<Object?> get props => [id, itemId, path, isPhoto, mimetype, addedAt];
 }

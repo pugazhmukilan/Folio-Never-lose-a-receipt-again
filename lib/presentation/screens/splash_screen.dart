@@ -87,7 +87,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -95,7 +94,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         opacity: _fadeAnimation,
         child: Center(
           child: Image.asset(
-            isDark ? 'assets/darklogo.png' : 'assets/light_logo.png',
+            'assets/logo.png',
             width: 120,
             height: 120,
             errorBuilder: (context, error, stackTrace) {

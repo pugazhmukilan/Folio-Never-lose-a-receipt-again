@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
@@ -74,7 +74,7 @@ class ImageActions {
   }
 
   // Download multiple images
-  static Future<void> downloadImages(BuildContext context, List<String> imagePaths, String productName) async {
+  static Future<void> downloadImages(BuildContext context, List<String> imagePaths, String itemName) async {
     if (imagePaths.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -105,7 +105,7 @@ class ImageActions {
           final Uint8List imageData = await File(imagePath).readAsBytes();
           final result = await ImageGallerySaverPlus.saveImage(
             imageData,
-            name: 'bill_${productName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}',
+            name: 'bill_${itemName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}',
           );
           
           if (result['isSuccess'] == true) {
@@ -148,7 +148,7 @@ class ImageActions {
   }
 
   // Share multiple images
-  static Future<void> shareImages(BuildContext context, List<String> imagePaths, String productName) async {
+  static Future<void> shareImages(BuildContext context, List<String> imagePaths, String itemName) async {
     if (imagePaths.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -160,7 +160,7 @@ class ImageActions {
 
     try {
       final List<XFile> files = imagePaths.map((path) => XFile(path)).toList();
-      await Share.shareXFiles(files, text: 'Sharing images of $productName');
+      await Share.shareXFiles(files, text: 'Sharing images of $itemName');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

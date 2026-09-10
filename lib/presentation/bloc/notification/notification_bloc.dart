@@ -8,8 +8,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   
   NotificationBloc({required this.notificationService}) : super(NotificationInitial()) {
     on<InitializeNotifications>(_onInitializeNotifications);
-    on<ScheduleWarrantyNotification>(_onScheduleWarrantyNotification);
-    on<CancelNotification>(_onCancelNotification);
+    on<ScheduleFieldReminder>(_onScheduleFieldReminder);
+    on<CancelFieldReminder>(_onCancelFieldReminder);
     on<RequestNotificationPermissions>(_onRequestNotificationPermissions);
   }
   
@@ -25,29 +25,30 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     }
   }
   
-  Future<void> _onScheduleWarrantyNotification(
-    ScheduleWarrantyNotification event,
+  Future<void> _onScheduleFieldReminder(
+    ScheduleFieldReminder event,
     Emitter<NotificationState> emit,
   ) async {
     try {
-      final notificationId = await notificationService.scheduleWarrantyExpiry(
-        productId: event.productId,
-        productName: event.productName,
-        expiryDate: event.expiryDate,
+      await notificationService.scheduleFieldReminder(
+        event.field,
+        event.itemName,
+        defaultLeadDays: event.daysBefore,
       );
-      
-      emit(NotificationScheduled(notificationId));
+
+      // We don't get an explicit ID back, as field ID is used implicitly
+      emit(const NotificationScheduled(0));
     } catch (e) {
       emit(NotificationError('Failed to schedule notification: ${e.toString()}'));
     }
   }
   
-  Future<void> _onCancelNotification(
-    CancelNotification event,
+  Future<void> _onCancelFieldReminder(
+    CancelFieldReminder event,
     Emitter<NotificationState> emit,
   ) async {
     try {
-      await notificationService.cancelNotification(event.notificationId);
+      await notificationService.cancelFieldReminder(event.fieldId);
       emit(NotificationCancelled());
     } catch (e) {
       emit(NotificationError('Failed to cancel notification: ${e.toString()}'));

@@ -1,7 +1,7 @@
 name: warranty_vault
-description: "An offline-first mobile app for managing product warranties, bills, and receipts."
+description: "Kipt — An offline-first personal item vault with composable fields, secure password storage, and expiry tracking."
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: ^3.10.1
@@ -44,21 +44,34 @@ dependencies:
   image_gallery_saver_plus: ^4.0.1
   url_launcher: ^6.3.1
   
-  # PDF Generation
+  # PDF Generation (used for settings/export backup)
   pdf: ^3.11.1
   printing: ^5.13.3
   
   # Biometric Authentication
   local_auth: ^2.3.0
+  
+  # Secure Storage (PASSWORD field encryption — Android Keystore / iOS Secure Enclave)
+  flutter_secure_storage: ^10.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  sqflite_common_ffi: ^2.3.3
 
 flutter:
   uses-material-design: true
   
   assets:
+    - assets/logo.png
     - assets/light_logo.png
     - assets/darklogo.png
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces.ttf

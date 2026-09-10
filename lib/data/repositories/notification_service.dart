@@ -1,139 +1,86 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import '../../../core/constants/app_constants.dart';
+import '../../core/constants/app_constants.dart';
+import '../models/item_field.dart';
 
 class NotificationService {
   static NotificationService? _instance;
-  final FlutterLocalNotificationsPlugin _notificationsPlugin;
-  
-  NotificationService._()
-      : _notificationsPlugin = FlutterLocalNotificationsPlugin();
-  
+  final FlutterLocalNotificationsPlugin _plugin;
+
+  NotificationService._() : _plugin = FlutterLocalNotificationsPlugin();
+
   factory NotificationService() {
     _instance ??= NotificationService._();
     return _instance!;
   }
-  
-  /// Initialize notification service
+
   Future<void> initialize() async {
-    const AndroidInitializationSettings androidSettings = 
+    const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    
-    const DarwinInitializationSettings iosSettings = 
-        DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
-        );
-    
-    const InitializationSettings initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
-    
-    await _notificationsPlugin.initialize(
-      initSettings,
+    await _plugin.initialize(
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
-    
-    // Create notification channel for Android
     await _createNotificationChannel();
   }
-  
-  /// Create notification channel
+
   Future<void> _createNotificationChannel() async {
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    const channel = AndroidNotificationChannel(
       AppConstants.notificationChannelId,
       AppConstants.notificationChannelName,
       description: AppConstants.notificationChannelDescription,
       importance: Importance.high,
     );
-    
-    await _notificationsPlugin
+    await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
   }
-  
-  /// Handle notification tap
+
   void _onNotificationTapped(NotificationResponse response) {
-    // Handle notification tap - navigate to product details
-    final productId = response.payload;
-    if (productId != null) {
-      // TODO: Navigate to product details screen
-      print('Notification tapped for product: $productId');
-    }
+    // payload = 'item:{itemId}' — handled at app level if needed
   }
-  
-  /// Schedule notification for warranty expiry
-  Future<int> scheduleWarrantyExpiry({
-    required int productId,
-    required String productName,
-    required DateTime expiryDate,
+
+  // ---------------------------------------------------------------------------
+  // Field-based reminders (spec §3.2, §3.4, §4)
+  // ---------------------------------------------------------------------------
+
+  /// Schedule a reminder for a DATE field.
+  /// The notification fires [field.reminderLeadDays] (or [defaultLeadDays]) 
+  /// before [field.parsedDate]. Uses [field.id] as the notification ID so it
+  /// can be precisely cancelled later.
+  Future<void> scheduleFieldReminder(
+    ItemField field,
+    String itemTitle, {
+    int defaultLeadDays = AppConstants.defaultReminderLeadDays,
   }) async {
-    final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
-    
-    // Calculate notification date (30 days before expiry)
-    final notificationDate = expiryDate.subtract(
-      const Duration(days: AppConstants.notificationReminderDays),
-    );
-    
-    // Only schedule if notification date is in the future
-    if (notificationDate.isAfter(DateTime.now())) {
-      final scheduledDate = tz.TZDateTime.from(notificationDate, tz.local);
-      
-      await _notificationsPlugin.zonedSchedule(
-        notificationId,
-        'Warranty Expiring Soon',
-        '$productName warranty expires in ${AppConstants.notificationReminderDays} days',
-        scheduledDate,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            AppConstants.notificationChannelId,
-            AppConstants.notificationChannelName,
-            channelDescription: AppConstants.notificationChannelDescription,
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
-          ),
-          iOS: DarwinNotificationDetails(),
-        ),
-        payload: productId.toString(),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
-    }
-    
-    return notificationId;
-  }
-  
-  /// Cancel notification
-  Future<void> cancelNotification(int notificationId) async {
-    await _notificationsPlugin.cancel(notificationId);
-  }
-  
-  /// Cancel all notifications
-  Future<void> cancelAllNotifications() async {
-    await _notificationsPlugin.cancelAll();
-  }
-  
-  /// Get pending notifications
-  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    return await _notificationsPlugin.pendingNotificationRequests();
-  }
-  
-  /// Show immediate notification
-  Future<void> showNotification({
-    required int id,
-    required String title,
-    required String body,
-    String? payload,
-  }) async {
-    await _notificationsPlugin.show(
-      id,
-      title,
+    if (!field.reminderEnabled) return;
+    if (field.fieldType != FieldType.date) return;
+    final date = field.parsedDate;
+    if (date == null) return;
+
+    final leadDays = field.reminderLeadDays ?? defaultLeadDays;
+    final notifyAt = date.subtract(Duration(days: leadDays));
+
+    if (notifyAt.isBefore(DateTime.now())) return; // already in the past
+
+    final scheduledDate = tz.TZDateTime.from(notifyAt, tz.local);
+    final notifId = _notifIdForField(field.id!);
+
+    final body = leadDays == 0
+        ? '"${field.label}" for $itemTitle is due today'
+        : '"${field.label}" for $itemTitle expires in $leadDays day${leadDays == 1 ? '' : 's'}';
+
+    await _plugin.zonedSchedule(
+      notifId,
+      'Kipt Reminder — $itemTitle',
       body,
+      scheduledDate,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           AppConstants.notificationChannelId,
@@ -145,21 +92,51 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
-      payload: payload,
+      payload: 'item:${field.itemId}',
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
-  
-  /// Request notification permissions (iOS)
+
+  /// Cancel the reminder notification for a specific field.
+  Future<void> cancelFieldReminder(int fieldId) async {
+    await _plugin.cancel(_notifIdForField(fieldId));
+  }
+
+  /// Cancel reminders for a list of fields (when deleting an item).
+  Future<void> cancelFieldReminders(List<ItemField> fields) async {
+    for (final f in fields) {
+      if (f.id != null && f.fieldType == FieldType.date && f.reminderEnabled) {
+        await cancelFieldReminder(f.id!);
+      }
+    }
+  }
+
+  /// Reschedule a field reminder (cancel old, schedule new).
+  Future<void> rescheduleFieldReminder(
+    ItemField field,
+    String itemTitle, {
+    int defaultLeadDays = AppConstants.defaultReminderLeadDays,
+  }) async {
+    if (field.id != null) await cancelFieldReminder(field.id!);
+    await scheduleFieldReminder(field, itemTitle,
+        defaultLeadDays: defaultLeadDays);
+  }
+
+  Future<void> cancelAllNotifications() async => _plugin.cancelAll();
+
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async =>
+      _plugin.pendingNotificationRequests();
+
   Future<bool> requestPermissions() async {
-    final result = await _notificationsPlugin
+    final result = await _plugin
         .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-    
+        ?.requestPermissions(alert: true, badge: true, sound: true);
     return result ?? true;
   }
+
+  /// Maps a field ID to a stable notification ID (stays within 32-bit int range).
+  int _notifIdForField(int fieldId) => fieldId % 2147483647;
 }

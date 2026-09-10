@@ -22,7 +22,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
-  int _defaultWarrantyDuration = 12;
+  int _defaultLeadDays = AppConstants.defaultReminderLeadDays;
   String _lastBackupDate = 'Never';
   
   @override
@@ -34,7 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _loadPreferences() {
     setState(() {
       _notificationsEnabled = PreferencesHelper.isNotificationEnabled();
-      _defaultWarrantyDuration = PreferencesHelper.getDefaultWarrantyDuration();
+      _defaultLeadDays = PreferencesHelper.getDefaultLeadDays();
       final lastBackup = PreferencesHelper.getLastBackupDate();
       if (lastBackup != null) {
         final date = DateTime.tryParse(lastBackup);
@@ -54,7 +54,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: BlocListener<BackupBloc, BackupState>(
         listener: (context, state) {
           if (state is BackupExportSuccess) {
-            // Share the backup file
             Share.shareXFiles(
               [XFile(state.backupFilePath, mimeType: 'application/octet-stream')],
               subject: 'Kipt Backup',
@@ -71,9 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message)),
             );
-            
-            // Navigate back to trigger reload in ProductsListScreen
-            Navigator.of(context).pop(true); // Pop with result to trigger reload
+            Navigator.of(context).pop(true); 
           }
           
           if (state is BackupError) {
@@ -100,7 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             
             return ListView(
               children: [
-                // Backup & Restore Section
                 _buildSectionHeader('Backup & Restore'),
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -125,7 +121,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 
-                // Preferences Section
                 _buildSectionHeader('Preferences'),
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -142,7 +137,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               builder: (context) => const CategoriesScreen(),
                             ),
                           );
-                          // No need to do anything here, products_list_screen will auto-refresh
                         },
                       ),
                       const Divider(height: 1),
@@ -157,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SwitchListTile(
                         secondary: const Icon(Icons.notifications_outlined),
                         title: const Text('Notifications'),
-                        subtitle: const Text('Warranty expiry reminders'),
+                        subtitle: const Text('Reminders for expiring dates'),
                         value: _notificationsEnabled,
                         onChanged: (value) {
                           setState(() {
@@ -169,16 +163,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.timer_outlined),
-                        title: const Text('Default Warranty Duration'),
-                        subtitle: Text('$_defaultWarrantyDuration months'),
+                        title: const Text('Default Reminder Lead Time'),
+                        subtitle: Text('$_defaultLeadDays days before expiry'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: _changeDefaultWarranty,
+                        onTap: _changeDefaultLeadDays,
                       ),
                     ],
                   ),
                 ),
                 
-                // Security Section
                 _buildSectionHeader('Security'),
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -199,11 +192,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onChanged: isAvailable
                             ? (value) async {
                                 if (value) {
-                                  // Test authentication before enabling
                                   final authService = AuthService();
                                   try {
                                     final authenticated = await authService.authenticate();
-                                    
                                     if (authenticated) {
                                       await AuthService.setAppLock(true);
                                       setState(() {});
@@ -212,15 +203,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           const SnackBar(
                                             content: Text('App lock enabled successfully'),
                                             backgroundColor: Colors.green,
-                                          ),
-                                        );
-                                      }
-                                    } else {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Authentication failed. Please try again.'),
-                                            backgroundColor: Colors.red,
                                           ),
                                         );
                                       }
@@ -240,9 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   setState(() {});
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('App lock disabled'),
-                                      ),
+                                      const SnackBar(content: Text('App lock disabled')),
                                     );
                                   }
                                 }
@@ -253,7 +233,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 
-                // App Information Section
                 _buildSectionHeader('About'),
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -280,7 +259,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-                
                 const SizedBox(height: 32),
               ],
             );
@@ -328,37 +306,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           builder: (context, setState) {
             return AlertDialog(
               title: const Text('Theme'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.system,
-                    groupValue: selected,
-                    title: const Text('System'),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => selected = value);
-                    },
-                  ),
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.light,
-                    groupValue: selected,
-                    title: const Text('Light'),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => selected = value);
-                    },
-                  ),
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.dark,
-                    groupValue: selected,
-                    title: const Text('Dark'),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => selected = value);
-                    },
-                  ),
-                ],
+              content: RadioGroup<ThemeMode>(
+                groupValue: selected,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => selected = value);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.system,
+                      title: const Text('System'),
+                    ),
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.light,
+                      title: const Text('Light'),
+                    ),
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.dark,
+                      title: const Text('Dark'),
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -368,7 +338,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     await cubit.setThemeMode(selected);
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     Navigator.of(context).pop();
                   },
                   child: const Text('Apply'),
@@ -388,7 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return AlertDialog(
           title: const Text('Export Backup'),
           content: const Text(
-            'This will create a backup file with all your products, images, and notes. You can save it to your device or share it.',
+            'This will create a backup file with all your items, images, and notes. You can save it to your device or share it.',
           ),
           actions: [
             TextButton(
@@ -426,35 +396,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return;
       }
         
-        if (!mounted) return;
-        
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Import Backup'),
-              content: const Text(
-                'This will replace all your current data with the backup data. This action cannot be undone.\n\nAre you sure?',
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Import Backup'),
+            content: const Text(
+              'This will replace all your current data with the backup data. This action cannot be undone.\n\nAre you sure?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.read<BackupBloc>().add(ImportBackup(selectedPath));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    context.read<BackupBloc>().add(ImportBackup(selectedPath));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                  ),
-                  child: const Text('Import'),
-                ),
-              ],
-            );
-          },
-        );
+                child: const Text('Import'),
+              ),
+            ],
+          );
+        },
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to pick file: ${e.toString()}')),
@@ -462,29 +432,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
   
-  void _changeDefaultWarranty() {
+  void _changeDefaultLeadDays() {
     showDialog(
       context: context,
       builder: (context) {
-        int selectedDuration = _defaultWarrantyDuration;
+        int selectedDays = _defaultLeadDays;
         
         return AlertDialog(
-          title: const Text('Default Warranty Duration'),
+          title: const Text('Default Reminder Lead Time'),
           content: StatefulBuilder(
             builder: (context, setState) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('$selectedDuration months'),
+                  Text('$selectedDays days'),
                   Slider(
-                    value: selectedDuration.toDouble(),
-                    min: 3,
-                    max: 60,
-                    divisions: 19,
-                    label: '$selectedDuration months',
+                    value: selectedDays.toDouble(),
+                    min: 1,
+                    max: 90,
+                    divisions: 89,
+                    label: '$selectedDays days',
                     onChanged: (value) {
                       setState(() {
-                        selectedDuration = value.toInt();
+                        selectedDays = value.toInt();
                       });
                     },
                   ),
@@ -500,9 +470,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  _defaultWarrantyDuration = selectedDuration;
+                  _defaultLeadDays = selectedDays;
                 });
-                PreferencesHelper.setDefaultWarrantyDuration(selectedDuration);
+                PreferencesHelper.setDefaultLeadDays(selectedDays);
                 Navigator.of(context).pop();
               },
               child: const Text('Save'),

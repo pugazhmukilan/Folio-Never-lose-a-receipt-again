@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../data/models/item_field.dart';
 
 abstract class NotificationEvent extends Equatable {
   const NotificationEvent();
@@ -10,30 +11,30 @@ abstract class NotificationEvent extends Equatable {
 /// Initialize notification service
 class InitializeNotifications extends NotificationEvent {}
 
-/// Schedule warranty expiry notification
-class ScheduleWarrantyNotification extends NotificationEvent {
-  final int productId;
-  final String productName;
-  final DateTime expiryDate;
+/// Schedule a reminder for a specific date field
+class ScheduleFieldReminder extends NotificationEvent {
+  final String itemName;
+  final ItemField field;
+  final int daysBefore;
   
-  const ScheduleWarrantyNotification({
-    required this.productId,
-    required this.productName,
-    required this.expiryDate,
+  const ScheduleFieldReminder({
+    required this.itemName,
+    required this.field,
+    required this.daysBefore,
   });
   
   @override
-  List<Object?> get props => [productId, productName, expiryDate];
+  List<Object?> get props => [itemName, field, daysBefore];
 }
 
-/// Cancel notification
-class CancelNotification extends NotificationEvent {
-  final int notificationId;
+/// Cancel reminder for a specific field
+class CancelFieldReminder extends NotificationEvent {
+  final int fieldId;
   
-  const CancelNotification(this.notificationId);
+  const CancelFieldReminder(this.fieldId);
   
   @override
-  List<Object?> get props => [notificationId];
+  List<Object?> get props => [fieldId];
 }
 
 /// Request notification permissions

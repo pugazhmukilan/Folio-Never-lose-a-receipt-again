@@ -3,95 +3,92 @@ import '../constants/app_constants.dart';
 
 class PreferencesHelper {
   static SharedPreferences? _preferences;
-  
-  /// Initialize shared preferences
+
   static Future<void> init() async {
     _preferences = await SharedPreferences.getInstance();
   }
-  
-  /// Get SharedPreferences instance
+
   static SharedPreferences get instance {
     if (_preferences == null) {
       throw Exception('PreferencesHelper not initialized. Call init() first.');
     }
     return _preferences!;
   }
-  
+
   // Theme Mode
   static Future<void> setThemeMode(String mode) async {
     await instance.setString(AppConstants.prefKeyThemeMode, mode);
   }
-  
+
   static String getThemeMode() {
     return instance.getString(AppConstants.prefKeyThemeMode) ?? 'system';
   }
-  
-  // Default Warranty Duration
-  static Future<void> setDefaultWarrantyDuration(int months) async {
-    await instance.setInt(AppConstants.prefKeyDefaultWarrantyDuration, months);
+
+  // Default lead days for reminders
+  static Future<void> setDefaultLeadDays(int days) async {
+    await instance.setInt(AppConstants.prefKeyDefaultLeadDays, days);
   }
-  
-  static int getDefaultWarrantyDuration() {
-    return instance.getInt(AppConstants.prefKeyDefaultWarrantyDuration) ?? 12;
+
+  static int getDefaultLeadDays() {
+    return instance.getInt(AppConstants.prefKeyDefaultLeadDays) ??
+        AppConstants.defaultReminderLeadDays;
   }
-  
+
   // Notification Enabled
   static Future<void> setNotificationEnabled(bool enabled) async {
     await instance.setBool(AppConstants.prefKeyNotificationEnabled, enabled);
   }
-  
+
   static bool isNotificationEnabled() {
     return instance.getBool(AppConstants.prefKeyNotificationEnabled) ?? true;
   }
-  
+
   // Last Backup Date
   static Future<void> setLastBackupDate(String date) async {
     await instance.setString(AppConstants.prefKeyLastBackupDate, date);
   }
-  
+
   static String? getLastBackupDate() {
     return instance.getString(AppConstants.prefKeyLastBackupDate);
   }
-  
+
   // Onboarding Complete
   static Future<void> setOnboardingComplete(bool complete) async {
     await instance.setBool(AppConstants.prefKeyOnboardingComplete, complete);
   }
-  
+
   static bool isOnboardingComplete() {
     return instance.getBool(AppConstants.prefKeyOnboardingComplete) ?? false;
   }
-  
+
   // Grid Columns
   static Future<void> setGridColumns(int columns) async {
     await instance.setInt(AppConstants.prefKeyGridColumns, columns);
   }
-  
+
   static int getGridColumns() {
     return instance.getInt(AppConstants.prefKeyGridColumns) ?? 2;
   }
-  
+
   // Sort By
   static Future<void> setSortBy(String sortBy) async {
     await instance.setString(AppConstants.prefKeySortBy, sortBy);
   }
-  
+
   static String getSortBy() {
-    return instance.getString(AppConstants.prefKeySortBy) ?? 
+    return instance.getString(AppConstants.prefKeySortBy) ??
         AppConstants.sortByDateAdded;
   }
-  
-  // App Lock
-  static const String _keyAppLock = 'app_lock_enabled';
-  
+
+  // Biometric / App Lock
   static bool isAppLockEnabled() {
-    return instance.getBool(_keyAppLock) ?? false;
+    return instance.getBool(AppConstants.prefKeyBiometricEnabled) ?? false;
   }
-  
+
   static Future<void> setAppLock(bool enabled) async {
-    await instance.setBool(_keyAppLock, enabled);
+    await instance.setBool(AppConstants.prefKeyBiometricEnabled, enabled);
   }
-  
+
   // Clear all preferences
   static Future<void> clearAll() async {
     await instance.clear();

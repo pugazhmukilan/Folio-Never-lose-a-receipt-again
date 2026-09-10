@@ -19,10 +19,21 @@ class AboutScreen extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  size: 80,
-                  color: colorScheme.primary,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/logo.png',
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.inventory_2_outlined,
+                        size: 80,
+                        color: colorScheme.primary,
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -47,12 +58,12 @@ class AboutScreen extends StatelessWidget {
           
           const SizedBox(height: 32),
           
-          // What is Folio
+          // What is Kipt
           _buildSection(
             context,
             icon: Icons.lightbulb_outline,
-            title: 'What is Folio?',
-            content: 'Folio is your personal warranty management assistant. Keep track of all your product warranties, bills, and receipts in one secure, offline-first application. Never miss a warranty claim deadline again!',
+            title: 'What is Kipt?',
+            content: 'Kipt is your item vault. One card for every important thing you own — warranty, receipt, ID, or note — stored securely and offline on your device.',
           ),
           
           const SizedBox(height: 24),
@@ -68,13 +79,13 @@ class AboutScreen extends StatelessWidget {
                 context,
                 icon: Icons.camera_alt_outlined,
                 title: 'Smart Receipt Scanning',
-                description: 'Capture bills and receipts with your camera. OCR technology automatically extracts product details, dates, and warranty information.',
+                description: 'Capture bills and receipts with your camera. OCR technology automatically extracts dates and key details.',
               ),
               _buildFeatureItem(
                 context,
                 icon: Icons.notifications_outlined,
                 title: 'Expiry Reminders',
-                description: 'Get timely notifications 30 days before your warranty expires. Never miss a claim deadline or extended warranty purchase window.',
+                description: 'Get timely notifications before your items expire — warranties, IDs, subscriptions and more.',
               ),
               _buildFeatureItem(
                 context,
@@ -86,7 +97,7 @@ class AboutScreen extends StatelessWidget {
                 context,
                 icon: Icons.category_outlined,
                 title: 'Smart Categories',
-                description: 'Organize products into categories: Electronics, Appliances, Home Appliances, Rentals, and more. Filter and search easily.',
+                description: 'Organize items into categories: Electronics, Appliances, IDs, Documents, and more. Filter and search easily.',
               ),
               _buildFeatureItem(
                 context,
@@ -104,7 +115,7 @@ class AboutScreen extends StatelessWidget {
                 context,
                 icon: Icons.attach_file_outlined,
                 title: 'Multiple Attachments',
-                description: 'Store multiple images per product - receipts, warranty cards, product photos, and serial numbers.',
+                description: 'Store multiple photos and PDFs per item — receipts, warranty cards, IDs, and more.',
               ),
               _buildFeatureItem(
                 context,
@@ -124,12 +135,12 @@ class AboutScreen extends StatelessWidget {
             title: 'How to Use',
             content: null,
             children: [
-              _buildStepItem(context, '1', 'Add a Product', 'Tap the + button on the home screen. Enter product details or scan a receipt to auto-fill information.'),
-              _buildStepItem(context, '2', 'Attach Documents', 'Add photos of your receipt, warranty card, and product. Multiple images supported.'),
+              _buildStepItem(context, '1', 'Add an Item', 'Tap the + button on the home screen. Enter the item name and details or scan a receipt to auto-fill information.'),
+              _buildStepItem(context, '2', 'Attach Documents', 'Add photos and PDFs of your receipt, warranty card, or ID. Multiple attachments supported.'),
               _buildStepItem(context, '3', 'Set Category & Expiry', 'Choose a category and set the warranty expiry date. Kipt will automatically calculate and track it.'),
               _buildStepItem(context, '4', 'Get Reminders', 'Enable notifications in Settings to receive alerts before warranties expire.'),
-              _buildStepItem(context, '5', 'Search & Filter', 'Use the search bar or category filters on the home screen to quickly find any product.'),
-              _buildStepItem(context, '6', 'View Details', 'Tap any product card to view complete details, edit information, or add notes.'),
+              _buildStepItem(context, '5', 'Search & Filter', 'Use the search bar or category filters on the home screen to quickly find any item.'),
+              _buildStepItem(context, '6', 'View Details', 'Tap any item card to view complete details, edit information, or add notes.'),
               _buildStepItem(context, '7', 'Backup Regularly', 'Go to Settings > Backup & Restore > Create Backup to export all your data as a ZIP file.'),
             ],
           ),
@@ -140,18 +151,18 @@ class AboutScreen extends StatelessWidget {
           _buildSection(
             context,
             icon: Icons.dashboard_outlined,
-            title: 'Product Categories',
+            title: 'Item Categories',
             content: null,
             children: [
-              _buildCategoryItem(context, 'All', 'View all products across all categories'),
+              _buildCategoryItem(context, 'All', 'View all items across all categories'),
               _buildCategoryItem(context, 'Electronics', 'Phones, laptops, cameras, headphones, etc.'),
               _buildCategoryItem(context, 'Appliances', 'Washing machines, refrigerators, air conditioners, etc.'),
               _buildCategoryItem(context, 'Home Appliances', 'Kitchen appliances, vacuum cleaners, water purifiers, etc.'),
               _buildCategoryItem(context, 'Furniture', 'Beds, sofas, tables, wardrobes, etc.'),
-              _buildCategoryItem(context, 'Vehicles', 'Cars, bikes, scooters with warranty tracking'),
+              _buildCategoryItem(context, 'Vehicles', 'Cars, bikes, scooters and more'),
               _buildCategoryItem(context, 'Tools', 'Power tools, hand tools, equipment'),
               _buildCategoryItem(context, 'Rentals', 'Rental properties with tenant and lease management'),
-              _buildCategoryItem(context, 'Others', 'Any other products you want to track'),
+              _buildCategoryItem(context, 'Others', 'Any other items you want to track'),
             ],
           ),
           
@@ -165,7 +176,7 @@ class AboutScreen extends StatelessWidget {
             content: null,
             children: [
               _buildInfoItem(context, 'Theme', 'Choose between Light, Dark, or System theme'),
-              _buildInfoItem(context, 'Default Warranty', 'Set default warranty duration (12-60 months)'),
+              _buildInfoItem(context, 'Default Warranty', 'Set the default warranty duration (12-60 months) for new items'),
               _buildInfoItem(context, 'App Lock', 'Enable biometric or PIN security'),
               _buildInfoItem(context, 'Notifications', 'Configure expiry reminder notifications'),
               _buildInfoItem(context, 'Backup/Restore', 'Export or import your complete data'),
@@ -182,11 +193,11 @@ class AboutScreen extends StatelessWidget {
             content: null,
             children: [
               _buildTipItem(context, '📸', 'Take clear photos of receipts in good lighting'),
-              _buildTipItem(context, '🗓️', 'Add products immediately after purchase'),
+              _buildTipItem(context, '🗓️', 'Add items right after purchase'),
               _buildTipItem(context, '💾', 'Create regular backups of your data'),
               _buildTipItem(context, '📝', 'Use the notes feature to track service history'),
               _buildTipItem(context, '🔔', 'Enable notifications to never miss expiry dates'),
-              _buildTipItem(context, '🏷️', 'Use categories to organize products efficiently'),
+              _buildTipItem(context, '🏷️', 'Use categories to organize items efficiently'),
               _buildTipItem(context, '🔒', 'Enable app lock for sensitive information'),
             ],
           ),
@@ -206,7 +217,7 @@ class AboutScreen extends StatelessWidget {
           // Footer
           Center(
             child: Text(
-              '© 2025 Kipt\nYour Warranty Management Solution',
+              '© 2025 Kipt — your item vault',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -279,7 +290,7 @@ class AboutScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.5),
+              color: colorScheme.primaryContainer.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, size: 20, color: colorScheme.primary),
